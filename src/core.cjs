@@ -238,6 +238,6 @@ const Bugcard = (() => {
       height + '" role="img"><title>' + xml(report.format) + ' tool-call receipt</title><rect width="720" height="' +
       height + '" rx="13" fill="#20372e"/>' + draw.join('') + '</svg>';
   }
-  return {parse,notice,markdown,svg,limit};
+  return {parse,notice,details,markdown,svg,limit};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=Bugcard;

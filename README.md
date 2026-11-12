@@ -1,54 +1,52 @@
 # Agent Bugcard
 
-**Report where a coding agent failed without sharing the conversation.** Open a Claude Code or Codex CLI JSONL file on your machine. Bugcard makes a small Markdown or SVG receipt showing the first reported tool error and nearby calls. No account, install, upload, or API key.
+Turn a **Claude Code or Codex CLI failure into a GitHub issue attachment**. The tool reads one session file on your machine and shows which tool call failed. You choose whether to include nearby calls, tool categories and shell exit codes. Your prompts, commands, paths and raw output stay private.
 
-[**Try the interactive demo →**](https://vighzhen.github.io/agent-bugcard/) · [Download the offline HTML](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html) · [中文说明](README.zh-CN.md)
+[**Try the demo with a sample session**](https://vighzhen.github.io/agent-bugcard/) · [Download the offline HTML](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html) · [中文说明](README.zh-CN.md)
 
-![Synthetic example: Read and Edit returned, the third call (Shell) reported an error, then Edit and Shell returned.](docs/sample.svg)
+![Synthetic Claude Code example. Call 3, Shell, returned exit 127. The suggested next check is the command name and PATH.](docs/sample.svg)
 
-The example above lets a maintainer ask “What did the third tool call report?” without you handing over the entire session. **Returned** only means a response exists. Bugcard cannot infer whether the agent solved the task.
+**What can a maintainer do with this?** In the sample above, the reporter chose to share exit 127. A maintainer can ask whether the executable is on the agent's PATH. Switch to the Codex example for exit 126 and the next question becomes whether the command can be executed. Programs can also return these codes themselves. The card records a starting point for triage. [Bash exit status reference](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html)
 
-## Try it in 30 seconds
+## Attach a receipt to an issue
 
-1. Open the demo above, or download the HTML and double-click it offline. The two built-in examples are synthetic.
-2. Select a sample or open **one** saved session JSONL file (up to 20 MiB). The browser reads only the file you choose.
-3. Turn off nearby calls for a counts-only card, or hide tool categories. Review the preview and save SVG or Markdown. Paste the Markdown into your issue and add what you expected in your own words.
+1. Open the demo or double-click the downloaded HTML to work offline. Both bundled examples are synthetic.
+2. Choose **Open local JSONL** and select the session where the problem happened. Exit codes start hidden for every local file. If several calls reported errors, use **Focus on** to choose the call you want to report.
+3. Review the sharing options and select **Copy for GitHub issue**. Paste the Markdown alongside a sentence describing what you expected. You can also save a standalone SVG or Markdown file.
 
-After cloning, you can also open [docs/index.html](docs/index.html) from disk. The page is self-contained and disables network connections with a content security policy. The GitHub link is an ordinary outbound link. There is no telemetry.
+**Finding your session.** Claude Code usually stores JSONL under `~/.claude/projects/`. Codex CLI uses `~/.codex/sessions/YYYY/MM/DD/`. On Windows, start in your user folder. If you configured `CLAUDE_CONFIG_DIR` or `CODEX_HOME`, use that base folder. Open one saved session up to 20 MiB. [Claude configuration](https://code.claude.com/docs/en/settings) · [Codex environment variables](https://developers.openai.com/codex/environment-variables)
 
 ## CLI
 
-Requires Node.js 18+. No third-party dependencies and no install step. From the repository root:
+Node.js 18+ is sufficient. From a clone of this repository:
 
 ```sh
-node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl
-node bin/agent-bugcard.cjs examples/codex.synthetic.jsonl --format svg > receipt.svg
-node bin/agent-bugcard.cjs path/to/one-session.jsonl --summary-only > receipt.md
+node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --exit-codes
+node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --call 3 --exit-codes --format svg > receipt.svg
+node bin/agent-bugcard.cjs path/to/session.jsonl --summary-only > receipt.md
 ```
 
-## What gets shared
+`--call N` selects the numbered error call shown in the card. `--hide-categories` and `--summary-only` also suppress numeric exit codes and their troubleshooting hints.
 
-| On the receipt | Never copied into the receipt |
-| --- | --- |
-| Agent format, recognized call/error/unpaired counts | Prompts, model replies, source code, filenames, repository names |
-| Optional: up to five call positions, broad tool categories, and outcomes | Tool arguments, output text, custom tool names, IDs, timestamps, environment data |
-| Counts of malformed lines or orphan results, when applicable | The malformed lines, raw JSON, or error messages |
+## What the card discloses
 
-Unknown tool names collapse to **Other**. The tool joins call IDs in memory, then discards them. It does not attempt to redact and republish a transcript. The counts and sequence can still identify a distinctive workflow. Review your card before sharing.
+| Included | Controlled by the reporter | Kept out |
+| --- | --- | --- |
+| Agent format, recognized call/error/unpaired counts, parsing warnings | Up to five call positions around the selected failure, broad tool categories, numeric shell failure codes (1–255), fixed hints for 126 and 127 | Prompts, responses, commands, output text, source code, paths, custom tool names, IDs, timestamps and environment values |
 
-## What counts as an error?
+Unknown tool names collapse to **Other**. A distinctive call pattern can still reveal a workflow. The app reads only the chosen file, has no backend or analytics, and blocks network connections while processing. The receipt contains a link to this repository. [Self-contained app source](docs/index.html)
 
-- **Claude Code:** matches `assistant.message.content[].tool_use` to `user.message.content[].tool_result` by ID and checks `is_error: true`. See the [upstream content-block types](https://github.com/anthropics/claude-agent-sdk-python/blob/main/src/claude_agent_sdk/types.py).
-- **Codex CLI:** matches `response_item` function/custom tool calls to their outputs by `call_id`. For shell calls it recognizes numeric exit codes in legacy `exec_command_end` events and the supported unified-exec header. See the [upstream response-item definitions](https://github.com/openai/codex/blob/main/codex-rs/protocol/src/models.rs) and [shell result header](https://github.com/openai/codex/blob/main/codex-rs/core/src/tools/context.rs).
-- **Unpaired** means no matching result was found. **Returned** does not certify success; unsupported headers and opaque outputs may hide failures. This does not diagnose root cause, detect model-only mistakes, or reproduce a bug by itself. Unrecognized record types are ignored. Use one session per file; do not concatenate unidentified sessions.
+## Reading a result
 
-## Contribute a failing format
+- **Error** means the trace reported a tool error. For Claude Code, Bugcard pairs tool calls with results by ID. For Bash errors it recognizes the supported leading exit-code header. For Codex it reads structured command-completion events and the supported unified-exec header. Exit codes and hints appear only when enabled. [Claude content-block types](https://github.com/anthropics/claude-agent-sdk-python/blob/main/src/claude_agent_sdk/types.py) · [Codex command item](https://github.com/openai/codex/blob/main/codex-rs/protocol/src/items.rs)
+- **Returned** means the tool supplied a response. The operation or overall task may still have failed.
+- **Unpaired** means no matching completion was observed. Unsupported events and model-only mistakes may have no visible error. Malformed lines and unmatched results are counted when a card can be generated.
 
-Did Bugcard miss a call? Open an [issue](https://github.com/vighzhen/agent-bugcard/issues) with the tool version, expected count, and a tiny **invented** example. Please do not attach a real transcript. If the tool saved you a round of back-and-forth, a star helps other maintainers find it.
+Did a real case need another field? Tell us which follow-up question the card left unanswered. For parser issues, please use an invented minimal fixture. [Open an issue](https://github.com/vighzhen/agent-bugcard/issues)
 
 ```sh
 npm test
-npm run build  # regenerates docs/index.html and the sample SVG
+npm run build
 ```
 
-MIT licensed. Independent project; not affiliated with Anthropic or OpenAI.
+MIT licensed. Independent project.

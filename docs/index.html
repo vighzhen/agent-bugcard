@@ -1,28 +1,38 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src data:; base-uri 'none'; form-action 'none'">
-<title>Agent Bugcard · Tool-call receipt</title>
+<title>Agent Bugcard · A private log to a GitHub issue</title>
+<meta name="description" content="Turn local Claude Code and Codex CLI tool failures into a small GitHub issue attachment. Review the calls and optional exit codes before copying.">
 <style>
-:root{color-scheme:light;--bg:#f4f2ea;--ink:#172c24;--green:#195c46;--line:#c6cabc;--muted:#46584f;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
-*{box-sizing:border-box}body{margin:0;color:var(--ink);background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.wrap{max-width:1136px;margin:auto;padding:0 32px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);height:70px}.brand{font-weight:770;display:flex;gap:10px;align-items:center;font-size:17px}.mark{background:var(--ink);color:#edfc89;font:700 18px/30px var(--mono);width:35px;text-align:center;border-radius:7px}.k{font:650 11px/1.5 var(--mono);letter-spacing:1.2px;text-transform:uppercase}.status{color:var(--green)}.status:before{content:'●';margin-right:8px}.intro{padding:45px 0 29px}h1{font-size:clamp(36px,5.3vw,65px);line-height:1;letter-spacing:-.065em;margin:12px 0 14px}.intro p{font-size:17px;line-height:1.5;color:var(--muted);max-width:740px;margin:0}
-.grid{display:grid;grid-template-columns:minmax(245px,.77fr) minmax(0,1.7fr);gap:26px;align-items:start}.controls{background:#fffef9;border:1px solid var(--line);padding:23px;border-radius:14px}.controls h2,.out h2{font-size:18px;letter-spacing:-.035em;margin:0}.sub{font-size:13px;color:var(--muted);line-height:1.5;margin:8px 0 14px}
-button,.filebtn{appearance:none;border:1px solid #9ba99c;background:transparent;color:var(--ink);border-radius:7px;padding:9px 12px;font-size:13px;font-weight:640;cursor:pointer;line-height:1.3;display:inline-block}
-button:focus-visible,input:focus-visible,.picker:focus-within{outline:3px solid #2f886a;outline-offset:2px}button:hover,.filebtn:hover{background:#e4eadc}button:disabled{opacity:.45;cursor:not-allowed}.tabs{display:flex;gap:6px;flex-wrap:wrap}.tabs [aria-pressed=true]{background:#e0eddc;border-color:var(--green);color:var(--green)}.picker{margin:14px 0 5px;position:relative;border:1px dashed #819382;border-radius:8px;overflow:hidden}.filebtn{width:100%;border:0;text-align:center;padding:12px}.picker input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
-hr{border:none;border-top:1px solid var(--line);margin:21px 0}label.opt{font-size:14px;display:flex;gap:9px;align-items:center;margin-top:12px}input{accent-color:var(--green)}.note{min-height:1em;line-height:1.5;font-size:13px;color:var(--muted);margin-bottom:0}.out{min-width:0}.outtitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.outtitle .k{color:var(--green)}#card svg{width:100%;height:auto;display:block;border-radius:10px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.primary{background:var(--ink);color:white;border-color:var(--ink)}.primary:hover{background:var(--green);color:white}details{border-top:1px solid var(--line);padding:12px 0}summary{font-size:14px;font-weight:650;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.55 var(--mono)}footer a{color:var(--green);font-weight:bold}footer{border-top:1px solid var(--line);padding:16px 0;margin:30px 0;color:var(--muted);font:12px/1.5 var(--mono)}
-@media(max-width:760px){.wrap{padding:0 18px}.grid{grid-template-columns:1fr;gap:20px}.intro{padding:25px 0 20px}.controls{padding:17px}.status{font-size:9px}.outtitle{margin-top:3px}}
+:root{color-scheme:light;--paper:#f7f6ef;--panel:#fffef9;--ink:#1b3026;--green:#275c40;--muted:#43564c;--rule:#c5cbbf;--mono:ui-monospace,SFMono-Regular,Consolas,monospace;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink)}.wrap{max-width:1080px;margin:auto;padding:0 28px}.top{height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rule)}.brand{display:flex;gap:9px;align-items:center;font-weight:720}.mark{padding:3px 7px;background:var(--ink);color:#ddedab;border-radius:5px;font:700 18px var(--mono)}a{color:var(--green);text-underline-offset:3px}.top a{font-size:14px}
+.intro{margin:32px 0 20px}.intro h1{margin:0 0 9px;font-size:clamp(31px,4.3vw,53px);letter-spacing:-.05em;line-height:1.05}.intro p{font-size:17px;line-height:1.5;margin:0;max-width:790px;color:var(--muted)}.toolbar,.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.toolbar{margin-bottom:17px}.actions{margin:15px 0 6px}
+button,.file{border:1px solid #98a99a;border-radius:7px;padding:9px 12px;background:var(--panel);color:var(--ink);cursor:pointer;line-height:1.25;font-family:inherit;font-size:14px;font-weight:650}
+button:hover,.file:hover{background:#e4ebdf}button:disabled{opacity:.48;cursor:not-allowed}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,.file:focus-within{outline:3px solid #398660;outline-offset:3px}
+[aria-pressed=true]{background:#e1ead7;border-color:var(--green)}.file{position:relative;overflow:hidden}.file input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(240px,.85fr);gap:20px;align-items:start}.receipt{background:#20372e;color:#f3f1e9;border-radius:12px;padding:21px 24px}.receipt h2{margin:13px 0 7px;font-size:clamp(21px,2.5vw,31px);line-height:1.16;letter-spacing:-.035em}.receipt .eyebrow{display:flex;justify-content:space-between;gap:8px;color:#d1ddb9;font:600 12px/1.4 var(--mono)}.receipt p{line-height:1.45;margin:7px 0}.tip{color:#ddedab;font-weight:600}.stats,.legend{color:#c1cfc6}.legend{font-size:13px}.receipt table{border-collapse:collapse;width:100%;margin:13px 0 9px;text-align:left;font-size:15px}.receipt th{color:#c1cfc6;font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;border-top:1px solid #506458;padding:10px 6px 6px}.receipt td{padding:6px}.receipt tr.focus{background:#4a4438;color:#ffd1aa}.receipt td:first-child{font-family:var(--mono)}.settings{background:var(--panel);border:1px solid var(--rule);padding:20px;border-radius:12px}.settings h2{font-size:17px;margin:0 0 13px}.opt{display:flex;align-items:center;gap:8px;font-size:14px;line-height:1.5;margin:8px 0}input{accent-color:var(--green)}select{max-width:100%;color:var(--ink);padding:5px}.muted,details p{font-size:13px;line-height:1.55;color:var(--muted)}.primary{background:var(--ink);color:#fff;border-color:var(--ink)}.primary:hover{background:var(--green)}details{border-top:1px solid var(--rule);padding:11px 0}summary{font-size:14px;font-weight:620;cursor:pointer}pre,textarea{font:13px/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}.settings pre{color:var(--muted);margin-bottom:0}textarea{width:100%;height:15em;background:var(--panel);color:var(--ink);padding:10px}#notice,#feedback{font-size:13px;line-height:1.5;margin:6px 0;color:var(--muted)}[hidden]{display:none!important}footer{margin:27px 0;border-top:1px solid var(--rule);padding:14px 0;color:var(--muted);font-size:13px}
+@media(max-width:740px){.wrap{padding:0 16px}.top{height:49px}.intro{margin:20px 0 14px}.intro p{font-size:15px}.grid{grid-template-columns:1fr;gap:14px}.receipt,.settings{padding:15px}.receipt table{font-size:14px}.toolbar{gap:5px}.toolbar button,.toolbar .file{padding:8px;font-size:13px}.actions button{font-size:13px}.settings{margin-top:2px}}
 </style></head>
-<body><div class="wrap"><header><div class="brand"><span class="mark" aria-hidden="true">:​:</span> Agent Bugcard</div><span class="k status">Offline workbench</span></header>
-<main><section class="intro"><div class="k">Tool-call diagnostics &nbsp; / &nbsp; v0.1</div><h1>Share the failure.</h1><p>Give an issue maintainer the shape of an agent run while keeping the conversation, commands, and file paths on your machine.</p></section>
-<div class="grid"><aside class="controls"><h2>Choose a trace</h2><p class="sub">Explore a synthetic session, or open one local JSONL file (up to 20 MiB).</p><div class="tabs"><button id="claude" type="button">Claude Code</button><button id="codex" type="button">Codex CLI</button></div>
-<div class="picker"><span class="filebtn">Open a local trace…</span><input type="file" id="file" aria-label="Open a local JSONL trace" accept=".jsonl,.ndjson,.json"></div><hr>
-<h2>On the card</h2><label class="opt"><input id="nearby" type="checkbox" checked> Nearby tool calls</label><label class="opt"><input id="categories" type="checkbox" checked> Tool categories</label><p class="note" id="scope"></p>
-<hr><p class="note" id="notice" role="status" aria-live="polite"></p></aside>
-<section class="out"><div class="outtitle"><h2>Export preview</h2><span class="k" id="source">Example session</span></div><div id="card" aria-live="polite"></div><div class="actions"><button id="saveSvg" class="primary">Save SVG</button><button id="saveMd">Save Markdown</button></div><details><summary>Read the exact Markdown</summary><pre id="md"></pre></details>
-<details><summary>What stays out?</summary><p class="sub">Prompts, model replies, tool arguments and output text, custom tool names, paths, IDs, timestamps, and environment metadata are never copied into a card. Counts, call order, categories, and tool outcomes may still reveal your workflow. Review both formats before sharing.</p></details>
-</section></div></main><footer>Local processing · No backend · No analytics &nbsp; | &nbsp; <a href="https://github.com/vighzhen/agent-bugcard" rel="noreferrer">Source on GitHub ↗</a></footer></div>
-<script>'use strict';
+<body><div class="wrap">
+<header class="top"><div class="brand"><span class="mark" aria-hidden="true">::</span> Agent Bugcard</div><a href="https://github.com/vighzhen/agent-bugcard" rel="noreferrer">View on GitHub ↗</a></header>
+<main><div class="intro"><h1>Report an agent failure privately.</h1><p>Turn a Claude Code or Codex CLI session into a GitHub issue attachment. Share the failing tool call and keep your commands, paths, and conversation on your machine.</p></div>
+<div class="toolbar" aria-label="Choose a session"><label class="file">Open local JSONL…<input type="file" id="file" aria-label="Open local JSONL" accept=".jsonl,.ndjson,.json"></label><button id="claude">Claude example</button><button id="codex">Codex example</button></div>
+<div class="grid"><section aria-label="Issue attachment">
+<div class="receipt" id="card" aria-live="polite"><div class="eyebrow"><span id="source"></span><span id="format"></span></div><h2 id="headline"></h2><p id="tip" class="tip"></p><p id="stats" class="stats"></p><table id="timeline"><thead><tr><th>Call</th><th id="categoryHead">Category</th><th>Outcome</th></tr></thead><tbody id="rows"></tbody></table><p class="legend" id="legend"></p></div>
+<div class="actions"><button id="copy" class="primary">Copy for GitHub issue</button><button id="saveSvg">Save SVG</button><button id="saveMd">Save Markdown</button></div><div id="feedback" role="status"></div>
+<details id="exact"><summary>Preview exact Markdown</summary><textarea id="md" readonly aria-label="Exact Markdown"></textarea></details>
+</section>
+<aside class="settings"><h2>Sharing options</h2><label class="opt" id="focusOpt" hidden>Focus on <select id="focus" aria-label="Choose the reported error"></select></label>
+<label class="opt"><input id="nearby" type="checkbox" checked> Include nearby calls</label><label class="opt"><input id="categories" type="checkbox" checked> Show tool categories</label><label class="opt"><input id="exitCodes" type="checkbox"> Include shell exit codes</label>
+<p id="scope" class="muted"></p><p id="notice" role="status"></p>
+<details id="demoInput"><summary>See the synthetic input</summary><pre id="sampleText"></pre></details>
+<details><summary>Where is my JSONL file?</summary><p>Claude Code usually saves sessions under <code>~/.claude/projects/</code>. Codex CLI uses <code>~/.codex/sessions/</code>. Look in their subfolders for the session you want. On Windows, start in your user folder. A custom <code>CLAUDE_CONFIG_DIR</code> or <code>CODEX_HOME</code> changes the base folder.</p><p>Choose one file up to 20 MiB. The browser reads the chosen file locally.</p></details>
+<details><summary>What stays private?</summary><p>Prompts, replies, commands, raw output, file paths, custom tool names, IDs and timestamps stay out of the receipt. A distinctive sequence of calls can still reveal a workflow. Review the Markdown before sharing.</p></details>
+</aside></div></main><footer>Works offline · No account or telemetry · <a href="https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html" rel="noreferrer">Download offline HTML</a></footer>
+</div><script>'use strict';
 const Bugcard = (() => {
   // Only this fixed vocabulary and derived counts may reach either renderer.
   const groups = new Map(Object.entries({
@@ -262,40 +272,166 @@ const Bugcard = (() => {
       height + '" role="img"><title>' + xml(report.format) + ' tool-call receipt</title><rect width="720" height="' +
       height + '" rx="13" fill="#20372e"/>' + draw.join('') + '</svg>';
   }
-  return {parse,notice,markdown,svg,limit};
+  return {parse,notice,details,markdown,svg,limit};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=Bugcard;
-</script><script>const DEMOS={"claude":"{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-a\",\"name\":\"Read\",\"input\":{\"file_path\":\"example.js\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-a\",\"content\":\"Example source text.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-b\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-b\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-c\",\"name\":\"Bash\",\"input\":{\"command\":\"sample-check\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-c\",\"is_error\":true,\"content\":\"Exit code 127\\nsh: sample-check: command not found\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-d\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-d\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-e\",\"name\":\"Bash\",\"input\":{\"command\":\"npm test\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-e\",\"content\":\"Example tests passed.\"}]}}\n","codex":"{\"timestamp\":\"2026-01-01T00:00:00Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"npm test\\\"}\",\"call_id\":\"sample-a\"}}\n{\"timestamp\":\"2026-01-01T00:00:01Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call_output\",\"call_id\":\"sample-a\",\"output\":\"Chunk ID: 123abc\\nWall time: 0.01 seconds\\nProcess exited with code 126\\nOutput:\\nPermission denied\"}}\n{\"timestamp\":\"2026-01-01T00:00:02Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call\",\"name\":\"apply_patch\",\"input\":\"example patch omitted\",\"call_id\":\"sample-b\"}}\n{\"timestamp\":\"2026-01-01T00:00:03Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call_output\",\"call_id\":\"sample-b\",\"output\":\"Updated the synthetic fixture.\"}}\n{\"timestamp\":\"2026-01-01T00:00:04Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"npm test\\\"}\",\"call_id\":\"sample-c\"}}\n"};
+</script><script>const DEMOS={"claude":"{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-a\",\"name\":\"Read\",\"input\":{\"file_path\":\"example.js\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-a\",\"content\":\"Example source text.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-b\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-b\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-c\",\"name\":\"Bash\",\"input\":{\"command\":\"sample-check\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-c\",\"is_error\":true,\"content\":\"Exit code 127\\nsh: sample-check: command not found\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-d\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-d\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-e\",\"name\":\"Bash\",\"input\":{\"command\":\"npm test\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-e\",\"content\":\"Example tests passed.\"}]}}\n","codex":"{\"timestamp\":\"2026-01-01T00:00:00Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"./sample-check\\\"}\",\"call_id\":\"sample-a\"}}\n{\"timestamp\":\"2026-01-01T00:00:01Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call_output\",\"call_id\":\"sample-a\",\"output\":\"Chunk ID: 123abc\\nWall time: 0.01 seconds\\nProcess exited with code 126\\nOutput:\\nPermission denied\"}}\n{\"timestamp\":\"2026-01-01T00:00:02Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call\",\"name\":\"apply_patch\",\"input\":\"example patch omitted\",\"call_id\":\"sample-b\"}}\n{\"timestamp\":\"2026-01-01T00:00:03Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call_output\",\"call_id\":\"sample-b\",\"output\":\"Updated the synthetic fixture.\"}}\n{\"timestamp\":\"2026-01-01T00:00:04Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"./sample-check\\\"}\",\"call_id\":\"sample-c\"}}\n"};
 'use strict';
-const el=id=>document.getElementById(id);
-let report=null, source='',epoch=0;
-function render(){
-  const yes=!!report?.count,opts={nearby:el('nearby').checked,categories:el('categories').checked};
-  el('saveSvg').disabled=el('saveMd').disabled=!yes;
-  el('categories').disabled=!opts.nearby;
-  el('scope').textContent=opts.nearby?'Shows counts and up to five calls around the first reported error, or the last five if none was reported.':'Summary only: agent format, call counts, and outcome counts.';
-  if(yes){el('card').innerHTML=Bugcard.svg(report,opts);el('md').textContent=Bugcard.markdown(report,opts);}
-  else{el('card').textContent='No receipt to export.';el('md').textContent='';}
-  el('source').textContent=source==='file'?'Local session':source==='claude'||source==='codex'?'Synthetic example':'No session';
-  for(const k of ['claude','codex'])el(k).setAttribute('aria-pressed',String(k===source));
+
+const element = id => document.getElementById(id);
+let report = null;
+let source = '';
+let revision = 0;
+
+function options() {
+  return {
+    nearby: element('nearby').checked,
+    categories: element('categories').checked,
+    exitCodes: element('exitCodes').checked,
+    call: Number(element('focus').value),
+    example: source === 'claude' || source === 'codex'
+  };
 }
-function setData(raw,k){report=Bugcard.parse(raw);source=k;el('notice').textContent=report.count?Bugcard.notice(report):'No supported tool calls found. Try a Claude Code or Codex CLI JSONL file.';render();}
-function demo(k){epoch++;el('file').value='';setData(DEMOS[k],k);}
-for(const k of ['claude','codex'])el(k).onclick=()=>demo(k);
-el('file').onchange=async()=>{
-  const f=el('file').files[0];if(!f)return;const request=++epoch;
-  report=null;source='file';render();el('file').value='';
-  if(f.size>Bugcard.limit){el('notice').textContent='File exceeds 20 MiB. No data was loaded.';return;}
-  el('notice').textContent='Reading locally…';
-  try{const raw=await f.text();if(request===epoch)setData(raw,'file');}catch{if(request===epoch)el('notice').textContent='Could not read the local file.';}
+
+function render() {
+  const sharing = options();
+  const ready = Boolean(report?.count);
+  for (const id of ['copy','saveSvg','saveMd']) element(id).disabled = !ready;
+  element('nearby').disabled = !ready;
+  element('categories').disabled = !ready || !sharing.nearby;
+  const hasExit = report?.calls.some(call => call.exitCode !== undefined);
+  element('exitCodes').disabled = !hasExit || !sharing.categories || !sharing.nearby;
+  element('focusOpt').hidden = !sharing.nearby || !(report?.errors > 1);
+  element('feedback').textContent = '';
+  element('exact').hidden = !ready;
+  for (const id of ['claude','codex']) element(id).setAttribute('aria-pressed',String(source === id));
+  element('source').textContent = sharing.example ? 'Synthetic example' : 'Local session';
+  element('format').textContent = ready ? report.format : '';
+  element('demoInput').hidden = !sharing.example;
+  element('sampleText').textContent = sharing.example ? exampleExcerpt(source) : '';
+  element('scope').textContent = !ready ? '' : !sharing.nearby
+    ? 'Only counts, agent format and parsing notes are shared.'
+    : hasExit ? 'Turning off exit codes also removes the related troubleshooting hint.'
+    : 'This session contains no recognized shell failure code.';
+  element('rows').replaceChildren();
+  element('timeline').hidden = true;
+  element('stats').textContent = '';
+  element('tip').textContent = '';
+  element('legend').textContent = '';
+  if (!ready) {
+    element('headline').textContent = 'No receipt to export';
+    element('md').value = '';
+    return;
+  }
+  const view = Bugcard.details(report,sharing);
+  const selected = view.target;
+  const title = selected ? ['Call #' + selected.n, view.showCategories ? selected.kind : '', view.outcome(selected)].filter(Boolean).join(' / ')
+    : sharing.nearby ? 'Last observed calls' : 'Session summary';
+  element('headline').textContent = title;
+  element('tip').textContent = view.hint || '';
+  const count = (n,noun) => n + ' ' + noun + (n === 1 ? '' : 's');
+  element('stats').textContent = count(report.count,'call') + ' · ' + count(report.errors,'reported error') + ' · ' + report.unpaired + ' unpaired';
+  element('timeline').hidden = !view.rows.length;
+  element('categoryHead').hidden = !view.showCategories;
+  for (const call of view.rows) {
+    const row = element('rows').insertRow();
+    if (call === selected) row.className = 'focus';
+    row.insertCell().textContent = '#' + call.n;
+    if (view.showCategories) row.insertCell().textContent = call.kind;
+    row.insertCell().textContent = view.outcome(call);
+  }
+  element('legend').textContent = view.rows.some(call=>call.state==='Returned') ? 'Returned means a response was recorded.' : '';
+  if (report.invalid || report.unmatched) element('legend').textContent += ' Partial input. ' + Bugcard.notice(report);
+  element('md').value = Bugcard.markdown(report,sharing);
+}
+
+// Only the two bundled, invented examples can supply content to this panel.
+function exampleExcerpt(id) {
+  const entries = DEMOS[id].trim().split('\n').map(line=>JSON.parse(line));
+  if (id === 'claude') {
+    const error = entries.flatMap(e=>e.message.content).find(b=>b.type==='tool_result' && b.is_error);
+    const call = entries.flatMap(e=>e.message.content).find(b=>b.type==='tool_use' && b.id===error.tool_use_id);
+    return 'Command: ' + call.input.command + '\nResult:\n' + error.content;
+  }
+  const call = entries.find(e=>e.payload.type==='function_call').payload;
+  const result = entries.find(e=>e.payload.type==='function_call_output').payload;
+  return 'Command: ' + JSON.parse(call.arguments).cmd + '\nResult:\n' + result.output;
+}
+
+function loadTrace(text, kind) {
+  report = Bugcard.parse(text);
+  source = kind;
+  element('exitCodes').checked = kind !== 'file';
+  const focus = element('focus');
+  focus.replaceChildren();
+  for (const call of report.calls) {
+    if (call.state === 'Error') focus.add(new Option('Call #' + call.n, String(call.n)));
+  }
+  element('notice').textContent = report.count
+    ? '' : 'No supported tool calls found. Choose a Claude Code or Codex CLI session JSONL.';
+  render();
+}
+
+function demo(kind) {
+  revision++;
+  element('file').value = '';
+  loadTrace(DEMOS[kind],kind);
+}
+
+for (const id of ['claude','codex']) element(id).onclick = () => demo(id);
+for (const id of ['nearby','categories','exitCodes','focus']) element(id).onchange = render;
+element('file').onchange = async () => {
+  const file = element('file').files[0];
+  if (!file) return;
+  const request = ++revision;
+  element('file').value = '';
+  element('exitCodes').checked = false;
+  element('demoInput').open = false;
+  source = 'file';
+  report = null;
+  render();
+  if (file.size > Bugcard.limit) {
+    element('notice').textContent = 'Choose a single JSONL file up to 20 MiB.';
+    return;
+  }
+  element('notice').textContent = 'Reading the file locally…';
+  try {
+    const text = await file.text();
+    if (request === revision) loadTrace(text,'file');
+  } catch {
+    if (request === revision) element('notice').textContent = 'Could not read the selected file.';
+  }
 };
-for(const k of ['nearby','categories'])el(k).onchange=render;
-function save(kind){
-  if(!report?.count)return;
-  const opts={nearby:el('nearby').checked,categories:el('categories').checked};
-  const body=kind==='svg'?Bugcard.svg(report,opts):Bugcard.markdown(report,opts);
-  const url=URL.createObjectURL(new Blob([body+'\n'],{type:kind==='svg'?'image/svg+xml':'text/markdown'}));
-  const a=document.createElement('a');a.href=url;a.download='agent-bugcard.'+kind;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+
+function download(format) {
+  if (!report?.count) return;
+  const body = format === 'svg' ? Bugcard.svg(report,options()) : element('md').value;
+  const type = format === 'svg' ? 'image/svg+xml' : 'text/markdown';
+  const url = URL.createObjectURL(new Blob([body+'\n'],{type}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'agent-bugcard.' + format;
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-el('saveSvg').onclick=()=>save('svg');el('saveMd').onclick=()=>save('md');demo('claude');
+
+element('copy').onclick = async () => {
+  if (!report?.count) return;
+  const request = revision;
+  const body = element('md').value;
+  const stillCurrent = () => request === revision && body === element('md').value;
+  try {
+    await navigator.clipboard.writeText(body);
+    if (stillCurrent()) element('feedback').textContent = 'Copied. Paste into your issue and describe what you expected.';
+  } catch {
+    if (!stillCurrent()) return;
+    element('exact').open = true;
+    element('md').focus();
+    element('md').select();
+    element('feedback').textContent = 'Markdown selected. Press Ctrl+C or ⌘C to copy it.';
+  }
+};
+element('saveSvg').onclick = () => download('svg');
+element('saveMd').onclick = () => download('md');
+demo('claude');
 </script></body></html>
