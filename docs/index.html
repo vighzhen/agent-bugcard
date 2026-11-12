@@ -9,7 +9,7 @@
 <style>
 :root{color-scheme:light;--paper:#f7f6ef;--panel:#fffef9;--ink:#1b3026;--green:#275c40;--muted:#43564c;--rule:#c5cbbf;--mono:ui-monospace,SFMono-Regular,Consolas,monospace;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink)}.wrap{max-width:1080px;margin:auto;padding:0 28px}.top{height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rule)}.brand{display:flex;gap:9px;align-items:center;font-weight:720}.mark{padding:3px 7px;background:var(--ink);color:#ddedab;border-radius:5px;font:700 18px var(--mono)}a{color:var(--green);text-underline-offset:3px}.top a{font-size:14px}
-.intro{margin:32px 0 20px}.intro h1{margin:0 0 9px;font-size:clamp(31px,4.3vw,53px);letter-spacing:-.05em;line-height:1.05}.intro p{font-size:17px;line-height:1.5;margin:0;max-width:790px;color:var(--muted)}.toolbar,.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.toolbar{margin-bottom:17px}.actions{margin:15px 0 6px}
+.intro{margin:32px 0 20px}.intro h1{margin:0 0 9px;font-size:clamp(31px,4.3vw,53px);letter-spacing:-.05em;line-height:1.05}.intro p{font-size:17px;line-height:1.5;margin:0;max-width:790px;color:var(--muted)}.toolbar,.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.toolbar{margin-bottom:5px}.finder{border:0;padding:4px 0 12px}.finder summary{color:var(--green);font-size:13px}.actions{margin:15px 0 6px}
 button,.file{border:1px solid #98a99a;border-radius:7px;padding:9px 12px;background:var(--panel);color:var(--ink);cursor:pointer;line-height:1.25;font-family:inherit;font-size:14px;font-weight:650}
 button:hover,.file:hover{background:#e4ebdf}button:disabled{opacity:.48;cursor:not-allowed}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,.file:focus-within{outline:3px solid #398660;outline-offset:3px}
 [aria-pressed=true]{background:#e1ead7;border-color:var(--green)}.file{position:relative;overflow:hidden}.file input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
@@ -20,6 +20,7 @@ button:hover,.file:hover{background:#e4ebdf}button:disabled{opacity:.48;cursor:n
 <header class="top"><div class="brand"><span class="mark" aria-hidden="true">::</span> Agent Bugcard</div><a href="https://github.com/vighzhen/agent-bugcard" rel="noreferrer">View on GitHub ↗</a></header>
 <main><div class="intro"><h1>Report an agent failure privately.</h1><p>Turn a Claude Code or Codex CLI session into a GitHub issue attachment. Share the failing tool call and keep your commands, paths, and conversation on your machine.</p></div>
 <div class="toolbar" aria-label="Choose a session"><label class="file">Open local JSONL…<input type="file" id="file" aria-label="Open local JSONL" accept=".jsonl,.ndjson,.json"></label><button id="claude">Claude example</button><button id="codex">Codex example</button></div>
+<details class="finder"><summary>Find my session file</summary><p>Open your user folder and choose one JSONL file from the relevant subfolder (up to 20 MiB). On macOS, press ⌘⇧G in the file picker to enter a folder path.</p><p><b>Claude Code</b> &nbsp;<code>~/.claude/projects/</code><br><b>Codex CLI</b> &nbsp;<code>~/.codex/sessions/</code></p><p>On Windows, use <code>%USERPROFILE%</code> in place of <code>~</code>. A custom <code>CLAUDE_CONFIG_DIR</code> or <code>CODEX_HOME</code> changes the base folder.</p></details>
 <div class="grid"><section aria-label="Issue attachment">
 <div class="receipt" id="card" aria-live="polite"><div class="eyebrow"><span id="source"></span><span id="format"></span></div><h2 id="headline"></h2><p id="tip" class="tip"></p><p id="stats" class="stats"></p><table id="timeline"><thead><tr><th>Call</th><th id="categoryHead">Category</th><th>Outcome</th></tr></thead><tbody id="rows"></tbody></table><p class="legend" id="legend"></p></div>
 <div class="actions"><button id="copy" class="primary">Copy for GitHub issue</button><button id="saveSvg">Save SVG</button><button id="saveMd">Save Markdown</button></div><div id="feedback" role="status"></div>
@@ -29,7 +30,7 @@ button:hover,.file:hover{background:#e4ebdf}button:disabled{opacity:.48;cursor:n
 <label class="opt"><input id="nearby" type="checkbox" checked> Include nearby calls</label><label class="opt"><input id="categories" type="checkbox" checked> Show tool categories</label><label class="opt"><input id="exitCodes" type="checkbox"> Include shell exit codes</label>
 <p id="scope" class="muted"></p><p id="notice" role="status"></p>
 <details id="demoInput"><summary>See the synthetic input</summary><pre id="sampleText"></pre></details>
-<details><summary>Where is my JSONL file?</summary><p>Claude Code usually saves sessions under <code>~/.claude/projects/</code>. Codex CLI uses <code>~/.codex/sessions/</code>. Look in their subfolders for the session you want. On Windows, start in your user folder. A custom <code>CLAUDE_CONFIG_DIR</code> or <code>CODEX_HOME</code> changes the base folder.</p><p>Choose one file up to 20 MiB. The browser reads the chosen file locally.</p></details>
+
 <details><summary>What stays private?</summary><p>Prompts, replies, commands, raw output, file paths, custom tool names, IDs and timestamps stay out of the receipt. A distinctive sequence of calls can still reveal a workflow. Review the Markdown before sharing.</p></details>
 </aside></div></main><footer>Works offline · No account or telemetry · <a href="https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html" rel="noreferrer">Download offline HTML</a></footer>
 </div><script>'use strict';
@@ -59,6 +60,18 @@ const Bugcard = (() => {
     return null;
   }
 
+  function legacyShellExit(output) {
+    // The legacy shell tool wraps stdout and measured duration in a JSON envelope.
+    if (typeof output !== 'string' || !output.startsWith('{')) return null;
+    let envelope;
+    try { envelope = JSON.parse(output); }
+    catch { return null; }
+    const meta = envelope?.metadata;
+    if (typeof envelope?.output !== 'string' || !Number.isFinite(meta?.duration_seconds)
+        || meta.duration_seconds < 0 || !Number.isInteger(meta.exit_code)) return null;
+    return meta.exit_code;
+  }
+
   function claudeExit(block, message) {
     if (block.is_error !== true) return null;
     const flags = message.tool_result_meta ?? message.toolResultMeta;
@@ -83,13 +96,14 @@ const Bugcard = (() => {
       const callKey = key(format, id);
       if (!calls.has(callKey)) calls.set(callKey, {format, name});
     }
-    function end(format, id, state, code) {
+    function end(format, id, state, code, legacyCode = null) {
       if (!present(id)) return;
       const callKey = key(format, id);
       const previous = results.get(callKey);
       results.set(callKey, {
         state: previous?.state === 'Error' ? 'Error' : state,
-        code: previous?.code ? previous.code : code ?? previous?.code
+        code: previous?.code ? previous.code : code ?? previous?.code,
+        legacyCode: previous?.legacyCode ? previous.legacyCode : legacyCode ?? previous?.legacyCode
       });
     }
     for (const line of text.split(/\r?\n/)) {
@@ -113,7 +127,7 @@ const Bugcard = (() => {
       } else if (event.type === 'response_item' && payload) {
         if (['function_call', 'custom_tool_call'].includes(payload.type)) add('Codex CLI', payload.call_id, payload.name);
         if (['function_call_output', 'custom_tool_call_output'].includes(payload.type)) {
-          end('Codex CLI', payload.call_id, 'Returned', codexExit(payload.output));
+          end('Codex CLI', payload.call_id, 'Returned', codexExit(payload.output), legacyShellExit(payload.output));
         }
       } else if (event.type === 'event_msg' && payload) {
         if (payload.type === 'exec_command_end' && present(payload.call_id) && Number.isSafeInteger(payload.exit_code)) {
@@ -141,7 +155,8 @@ const Bugcard = (() => {
       const completion = group === 'Shell' ? completions.get(id) : undefined;
       // Claude's textual exit header is recognized only on a Bash error result.
       const acceptsExit = call.format === 'Codex CLI' ? group === 'Shell' : call.name === 'Bash';
-      const code = acceptsExit ? completion?.code ?? result?.code : null;
+      const legacyCode = call.name === 'shell' || call.name === 'shell_command' ? result?.legacyCode : null;
+      const code = acceptsExit ? completion?.code ?? result?.code ?? legacyCode : null;
       let state = completion?.state ?? result?.state ?? 'Unpaired';
       if (Number.isInteger(code)) state = code === 0 ? 'Returned' : 'Error';
       const row = {n: rows.length + 1, kind: group, state};

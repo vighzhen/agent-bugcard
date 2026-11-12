@@ -38,7 +38,7 @@ Unknown tool names collapse to **Other**. A distinctive call pattern can still r
 
 ## Reading a result
 
-- **Error** means the trace reported a tool error. For Claude Code, Bugcard pairs tool calls with results by ID. For Bash errors it recognizes the supported leading exit-code header. For Codex it reads structured command-completion events and the supported unified-exec header. Exit codes and hints appear only when enabled. [Claude content-block types](https://github.com/anthropics/claude-agent-sdk-python/blob/main/src/claude_agent_sdk/types.py) · [Codex command item](https://github.com/openai/codex/blob/main/codex-rs/protocol/src/items.rs)
+- **Error** means the trace reported a tool error. For Claude Code, Bugcard pairs tool calls with results by ID. For Bash errors it recognizes the supported leading exit-code header. For Codex it reads structured command-completion events, legacy shell result metadata and the supported unified-exec header. Exit codes and hints appear only when enabled. [Claude content-block types](https://github.com/anthropics/claude-agent-sdk-python/blob/main/src/claude_agent_sdk/types.py) · [Codex command item](https://github.com/openai/codex/blob/main/codex-rs/protocol/src/items.rs)
 - **Returned** means the tool supplied a response. The operation or overall task may still have failed.
 - **Unpaired** means no matching completion was observed. Unsupported events and model-only mistakes may have no visible error. Malformed lines and unmatched results are counted when a card can be generated.
 

@@ -25,6 +25,18 @@ const Bugcard = (() => {
     return null;
   }
 
+  function legacyShellExit(output) {
+    // The legacy shell tool wraps stdout and measured duration in a JSON envelope.
+    if (typeof output !== 'string' || !output.startsWith('{')) return null;
+    let envelope;
+    try { envelope = JSON.parse(output); }
+    catch { return null; }
+    const meta = envelope?.metadata;
+    if (typeof envelope?.output !== 'string' || !Number.isFinite(meta?.duration_seconds)
+        || meta.duration_seconds < 0 || !Number.isInteger(meta.exit_code)) return null;
+    return meta.exit_code;
+  }
+
   function claudeExit(block, message) {
     if (block.is_error !== true) return null;
     const flags = message.tool_result_meta ?? message.toolResultMeta;
@@ -49,13 +61,14 @@ const Bugcard = (() => {
       const callKey = key(format, id);
       if (!calls.has(callKey)) calls.set(callKey, {format, name});
     }
-    function end(format, id, state, code) {
+    function end(format, id, state, code, legacyCode = null) {
       if (!present(id)) return;
       const callKey = key(format, id);
       const previous = results.get(callKey);
       results.set(callKey, {
         state: previous?.state === 'Error' ? 'Error' : state,
-        code: previous?.code ? previous.code : code ?? previous?.code
+        code: previous?.code ? previous.code : code ?? previous?.code,
+        legacyCode: previous?.legacyCode ? previous.legacyCode : legacyCode ?? previous?.legacyCode
       });
     }
     for (const line of text.split(/\r?\n/)) {
@@ -79,7 +92,7 @@ const Bugcard = (() => {
       } else if (event.type === 'response_item' && payload) {
         if (['function_call', 'custom_tool_call'].includes(payload.type)) add('Codex CLI', payload.call_id, payload.name);
         if (['function_call_output', 'custom_tool_call_output'].includes(payload.type)) {
-          end('Codex CLI', payload.call_id, 'Returned', codexExit(payload.output));
+          end('Codex CLI', payload.call_id, 'Returned', codexExit(payload.output), legacyShellExit(payload.output));
         }
       } else if (event.type === 'event_msg' && payload) {
         if (payload.type === 'exec_command_end' && present(payload.call_id) && Number.isSafeInteger(payload.exit_code)) {
@@ -107,7 +120,8 @@ const Bugcard = (() => {
       const completion = group === 'Shell' ? completions.get(id) : undefined;
       // Claude's textual exit header is recognized only on a Bash error result.
       const acceptsExit = call.format === 'Codex CLI' ? group === 'Shell' : call.name === 'Bash';
-      const code = acceptsExit ? completion?.code ?? result?.code : null;
+      const legacyCode = call.name === 'shell' || call.name === 'shell_command' ? result?.legacyCode : null;
+      const code = acceptsExit ? completion?.code ?? result?.code ?? legacyCode : null;
       let state = completion?.state ?? result?.state ?? 'Unpaired';
       if (Number.isInteger(code)) state = code === 0 ? 'Returned' : 'Error';
       const row = {n: rows.length + 1, kind: group, state};

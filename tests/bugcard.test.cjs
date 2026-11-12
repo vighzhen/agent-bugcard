@@ -102,3 +102,17 @@ test('selected error controls the context window and check in both renderers', (
     assert.ok(exported.includes('exit 126'));assert.ok(!exported.includes('exit 127'));assert.ok(!exported.includes('PATH'));
   }
 });
+test('legacy Codex shell envelopes retain explicit failures and exclude stdout', () => {
+  const body = JSON.stringify({output:'fake private text',metadata:{exit_code:127,duration_seconds:0.2}});
+  const wrap = (name, output) => parse(lines(rsp('function_call','x',{name}),
+    rsp('function_call_output','x',{output})));
+  const report = wrap('shell', body);
+  assert.equal(report.errors,1);assert.equal(report.calls[0].exitCode,127);
+  assert.ok(!markdown(report,{exitCodes:true}).includes('fake private'));
+  assert.ok(!markdown(report).includes('127'));
+  for(const [name,output] of [
+    ['Read',body],['exec_command',body],['shell','Output:\n'+body],
+    ['shell', JSON.stringify({output:body,metadata:{exit_code:'127',duration_seconds:1}})],
+    ['shell', JSON.stringify({output:body,metadata:{exit_code:126}})]
+  ]) assert.equal(wrap(name,output).calls[0].exitCode,undefined);
+});
