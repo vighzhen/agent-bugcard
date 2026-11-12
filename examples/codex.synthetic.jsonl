@@ -1,5 +1,5 @@
 {"timestamp":"2026-01-01T00:00:00Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"npm test\"}","call_id":"sample-a"}}
-{"timestamp":"2026-01-01T00:00:01Z","type":"response_item","payload":{"type":"function_call_output","call_id":"sample-a","output":"Chunk ID: 123abc\nWall time: 0.01 seconds\nProcess exited with code 1\nOutput:\nExample failure"}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"response_item","payload":{"type":"function_call_output","call_id":"sample-a","output":"Chunk ID: 123abc\nWall time: 0.01 seconds\nProcess exited with code 126\nOutput:\nPermission denied"}}
 {"timestamp":"2026-01-01T00:00:02Z","type":"response_item","payload":{"type":"custom_tool_call","name":"apply_patch","input":"example patch omitted","call_id":"sample-b"}}
 {"timestamp":"2026-01-01T00:00:03Z","type":"response_item","payload":{"type":"custom_tool_call_output","call_id":"sample-b","output":"Updated the synthetic fixture."}}
 {"timestamp":"2026-01-01T00:00:04Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"npm test\"}","call_id":"sample-c"}}

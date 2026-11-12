@@ -53,3 +53,52 @@ test('explicit session boundaries isolate reused IDs in combined exports',()=>{
     {type:'session_meta',payload:{id:'second'}},rsp('function_call','shared',{name:'apply_patch'})));
   assert.equal(r.count,2);assert.equal(r.unpaired,1);assert.equal(r.calls[1].kind,'Edit');assert.ok(!markdown(r).includes('shared'));
 });
+test('exit code and its hint require explicit consent, nearby calls, and categories', () => {
+  for (const [name, code, tip] of [['claude',127,'PATH'],['codex',126,'executed']]) {
+    const report = parse(fixture(name));
+    for (const render of [markdown,svg]) {
+      for (const options of [{}, {exitCodes:true,nearby:false}, {exitCodes:true,categories:false}]) {
+        const body = render(report,options);
+        assert.ok(!body.includes('exit '+code));assert.ok(!body.includes(tip));
+      }
+      const body = render(report,{exitCodes:true});
+      assert.ok(body.includes('exit '+code));assert.ok(body.includes(tip));
+    }
+  }
+});
+test('Claude text is not trusted when execution was rejected, tool was not Bash, or header is in stdout', () => {
+  const secret = 'private-fixture-word';
+  for (const [name,content,flag,stamp] of [
+    ['Bash','Exit code 127\n'+secret,true,'permission-rule'],
+    ['PowerShell','Exit code 127',true], ['Read','Exit code 127',true],
+    ['Bash','Output: '+secret+'\nExit code 127',true], ['Bash','Exit code 127',false]
+  ]) {
+    const result = res('id',flag,content);
+    if(stamp) result.tool_result_meta=[{non_execution_kind:stamp}];
+    const r=parse(lines(cla('id',name,{}),result));
+    assert.equal(r.calls[0].exitCode,undefined);
+    assert.ok(!markdown(r,{exitCodes:true}).includes(secret));
+  }
+});
+test('a modern completed command and its model-level mirror count once and prefer structured status', () => {
+  const tool = {id:'sample',type:'CommandExecution',status:'failed',exit_code:127};
+  const events = lines(rsp('function_call','sample',{name:'exec_command'}),
+    rsp('function_call_output','sample',{output:'opaque'}),
+    {type:'event_msg',payload:{type:'item_completed',item:tool}});
+  const r = parse(events);
+  assert.equal(r.count,1);assert.equal(r.errors,1);assert.equal(r.calls[0].exitCode,127);
+  const standalone = parse(lines({type:'event_msg',payload:{type:'item_completed',item:{...tool,exit_code:16777215}}}));
+  assert.equal(standalone.errors,1);assert.equal(standalone.calls[0].exitCode,undefined);
+});
+test('selected error controls the context window and check in both renderers', () => {
+  const steps=[];
+  for(let n=1;n<=10;n++){
+    const code=n===1?127:n===9?126:0;
+    steps.push(cla(String(n),'Bash',{}),res(String(n),!!code,code?'Exit code '+code:'ok'));
+  }
+  const r=parse(lines(...steps));
+  for(const render of [svg,markdown]) {
+    const exported=render(r,{call:9,exitCodes:true});
+    assert.ok(exported.includes('exit 126'));assert.ok(!exported.includes('exit 127'));assert.ok(!exported.includes('PATH'));
+  }
+});

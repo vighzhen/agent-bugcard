@@ -33,111 +33,239 @@ const Bugcard = (() => {
   const limit=20*1024*1024;
   const kind=(s)=>groups.get(s)||'Other';
   const present=(x)=>typeof x==='string' && x.length>0;
-  function exitStatus(output){
-    let s=output;
-    if(Array.isArray(s)){
-      for(const x of s){if(x && ['input_text','output_text','text'].includes(x.type) && typeof x.text==='string'){const state=exitStatus(x.text);if(state)return state;}}
-      return null;
-    }
-    if(typeof s!=='string')return null;
-    // Only inspect the known execution header. Never search arbitrary stdout for an error phrase.
-    const m=/^Chunk ID: [^\r\n]{1,128}\r?\nWall time: [\d.]+ seconds\r?\nProcess exited with code (-?\d{1,6})(?=\r?\n|$)/.exec(s.slice(0,512));
-    return m ? (Number(m[1])===0?'Returned':'Error') : null;
+  function firstText(content) {
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content) && content[0]?.type === 'text') return content[0].text;
+    return null;
   }
-  function parse(text){
-    const calls=new Map(),results=new Map(),execEnds=new Map(); let invalid=0;
-    const sessions={'Claude Code':'','Codex CLI':''};
-    const key=(f,id)=>JSON.stringify([f,sessions[f],id]);
-    function add(f,id,name){
-      if(!present(id)||!present(name))return;
-      const k=key(f,id);if(!calls.has(k))calls.set(k,{f,kind:kind(name)});
+
+  function codexExit(output) {
+    const blocks = Array.isArray(output) ? output : [{type: 'text', text: output}];
+    for (const block of blocks) {
+      if (!['text', 'input_text', 'output_text'].includes(block?.type) || typeof block.text !== 'string') continue;
+      const match = /^Chunk ID: [^\r\n]{1,128}\r?\nWall time: [\d.]+ seconds\r?\nProcess exited with code (-?\d{1,10})(?=\r?\n|$)/.exec(block.text.slice(0, 512));
+      if (match) return Number(match[1]);
     }
-    function end(f,id,result,header=null){
-      if(!present(id))return;
-      const k=key(f,id),prev=results.get(k);
-      // A repeated content block is still the same call. Preserve any reported error.
-      results.set(k,{result:prev?.result==='Error'?'Error':result,header:prev?.header==='Error'?'Error':header||prev?.header});
+    return null;
+  }
+
+  function claudeExit(block, message) {
+    if (block.is_error !== true) return null;
+    const flags = message.tool_result_meta ?? message.toolResultMeta;
+    if (Array.isArray(flags) && flags.some(item => item?.non_execution_kind)) return null;
+    const content = firstText(block.content);
+    if (typeof content !== 'string') return null;
+    const match = /^Exit code ([1-9]\d{0,2})(?=\r?\n|$)/.exec(content.slice(0, 40));
+    return match ? Number(match[1]) : null;
+  }
+
+  function parse(text) {
+    const calls = new Map();
+    const results = new Map();
+    const completions = new Map();
+    const sessions = {'Claude Code': '', 'Codex CLI': ''};
+    let invalid = 0;
+    function key(format, id) {
+      return JSON.stringify([format, sessions[format], id]);
     }
-    for(const line of text.split(/\r?\n/)){
-      if(!line.trim())continue;
-      let e;try{e=JSON.parse(line);}catch{invalid++;continue;}
-      if(!e || typeof e!=='object')continue;
-      const p=e.payload;
-      if((e.type==='assistant'||e.type==='user') && present(e.sessionId))sessions['Claude Code']=e.sessionId;
-      if(e.type==='session_meta' && present(p?.id))sessions['Codex CLI']=p.id;
-      if((e.type==='assistant'||e.type==='user')&&Array.isArray(e.message?.content)){
-        for(const b of e.message.content){
-          if(!b)continue;
-          if(e.type==='assistant'&&b.type==='tool_use')add('Claude Code',b.id,b.name);
-          if(e.type==='user'&&b.type==='tool_result')end('Claude Code',b.tool_use_id,b.is_error===true?'Error':'Returned');
+    function add(format, id, name) {
+      if (!present(id) || !present(name)) return;
+      const callKey = key(format, id);
+      if (!calls.has(callKey)) calls.set(callKey, {format, name});
+    }
+    function end(format, id, state, code) {
+      if (!present(id)) return;
+      const callKey = key(format, id);
+      const previous = results.get(callKey);
+      results.set(callKey, {
+        state: previous?.state === 'Error' ? 'Error' : state,
+        code: previous?.code ? previous.code : code ?? previous?.code
+      });
+    }
+    for (const line of text.split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      let event;
+      try { event = JSON.parse(line); }
+      catch { invalid++; continue; }
+      if (!event || typeof event !== 'object') continue;
+      const payload = event.payload;
+      if (event.type === 'assistant' || event.type === 'user') {
+        if (present(event.sessionId)) sessions['Claude Code'] = event.sessionId;
+        if (!Array.isArray(event.message?.content)) continue;
+        for (const block of event.message.content) {
+          if (event.type === 'assistant' && block?.type === 'tool_use') add('Claude Code', block.id, block.name);
+          if (event.type === 'user' && block?.type === 'tool_result') {
+            end('Claude Code', block.tool_use_id, block.is_error === true ? 'Error' : 'Returned', claudeExit(block, event));
+          }
         }
-      }else if(e.type==='response_item' && p){
-        if(p.type==='function_call'||p.type==='custom_tool_call')add('Codex CLI',p.call_id,p.name);
-        if(p.type==='function_call_output'||p.type==='custom_tool_call_output')end('Codex CLI',p.call_id,'Returned',exitStatus(p.output));
-      }else if(e.type==='event_msg'&&p?.type==='exec_command_end'&&present(p.call_id)&&Number.isSafeInteger(p.exit_code)){
-        execEnds.set(key('Codex CLI',p.call_id),p.exit_code===0?'Returned':'Error');
+      } else if (event.type === 'session_meta' && present(payload?.id)) {
+        sessions['Codex CLI'] = payload.id;
+      } else if (event.type === 'response_item' && payload) {
+        if (['function_call', 'custom_tool_call'].includes(payload.type)) add('Codex CLI', payload.call_id, payload.name);
+        if (['function_call_output', 'custom_tool_call_output'].includes(payload.type)) {
+          end('Codex CLI', payload.call_id, 'Returned', codexExit(payload.output));
+        }
+      } else if (event.type === 'event_msg' && payload) {
+        if (payload.type === 'exec_command_end' && present(payload.call_id) && Number.isSafeInteger(payload.exit_code)) {
+          completions.set(key('Codex CLI', payload.call_id), {code: payload.exit_code});
+        }
+        const item = payload.item;
+        if (['item_started', 'item_completed'].includes(payload.type) && item?.type === 'CommandExecution' && present(item.id)) {
+          add('Codex CLI', item.id, 'exec_command');
+          if (payload.type === 'item_completed') {
+            completions.set(key('Codex CLI', item.id), {
+              code: Number.isSafeInteger(item.exit_code) ? item.exit_code : null,
+              state: ['failed','declined'].includes(item.status) ? 'Error' : 'Returned'
+            });
+          }
+        }
       }
     }
-    const callsOut=[];const formats=new Set();
-    for(const [id,c] of calls){
-      formats.add(c.f);const r=results.get(id);
-      const state=c.kind==='Shell' && c.f==='Codex CLI' ? (execEnds.get(id)||r?.header||r?.result||'Unpaired') : (r?.result||'Unpaired');
-      callsOut.push({n:callsOut.length+1,kind:c.kind,state});
+
+    const rows = [];
+    const formats = new Set();
+    for (const [id, call] of calls) {
+      const group = kind(call.name);
+      formats.add(call.format);
+      const result = results.get(id);
+      const completion = group === 'Shell' ? completions.get(id) : undefined;
+      // Claude's textual exit header is recognized only on a Bash error result.
+      const acceptsExit = call.format === 'Codex CLI' ? group === 'Shell' : call.name === 'Bash';
+      const code = acceptsExit ? completion?.code ?? result?.code : null;
+      let state = completion?.state ?? result?.state ?? 'Unpaired';
+      if (Number.isInteger(code)) state = code === 0 ? 'Returned' : 'Error';
+      const row = {n: rows.length + 1, kind: group, state};
+      // Preserve failures outside 1..255 as errors, but never export that number.
+      if (Number.isInteger(code) && code > 0 && code <= 255) row.exitCode = code;
+      rows.push(row);
     }
-    // Drop every join key and every raw value before rendering.
-    let unmatched=0;for(const id of new Set([...results.keys(),...execEnds.keys()]))if(!calls.has(id))unmatched++;
-    return {format:formats.size>1?'Mixed formats':[...formats][0]||'Unknown',count:callsOut.length,
-      errors:callsOut.filter(c=>c.state==='Error').length,unpaired:callsOut.filter(c=>c.state==='Unpaired').length,calls:callsOut,invalid,unmatched};
+    let unmatched = 0;
+    for (const id of new Set([...results.keys(), ...completions.keys()])) {
+      if (!calls.has(id)) unmatched++;
+    }
+    return {
+      format: formats.size > 1 ? 'Mixed formats' : [...formats][0] || 'Unknown',
+      count: rows.length, errors: rows.filter(call => call.state === 'Error').length,
+      unpaired: rows.filter(call => call.state === 'Unpaired').length, calls: rows, invalid, unmatched
+    };
   }
   function notice(r){
     const notes=[];if(r.invalid)notes.push(r.invalid+' malformed JSON line(s) skipped.');
     if(r.unmatched)notes.push(r.unmatched+' result ID(s) without a matching call ignored.');
     return notes.join(' ')||'Ready for review. Only recognized calls are counted.';
   }
-  function windowRows(r){
-    const i=r.calls.findIndex(c=>c.state==='Error');
-    const start=i<0?Math.max(0,r.count-5):Math.max(0,Math.min(i-2,r.count-5));
-    return r.calls.slice(start,start+5);
-  }
-  const caption=r=>r.errors?'FIRST REPORTED ERROR':'LAST OBSERVED CALLS';
   const coverage=r=>[r.invalid?r.invalid+' malformed lines skipped':'',r.unmatched?r.unmatched+' unmatched result IDs':''].filter(Boolean).join('; ');
-  const label=(n,s)=>n+' '+s+(n===1?'':'s');
-  function markdown(r,o={}){
-    const show=o.nearby!==false,cat=o.categories!==false;
-    const lines=['**Agent Bugcard · '+r.format+'**','',label(r.count,'recognized tool call')+' · '+label(r.errors,'reported error')+' · '+label(r.unpaired,'unpaired call')+'.'];
-    if(show){lines.push('',r.errors?'Around the first reported error:':'Last observed calls:','',cat?'| Call | Category | Outcome |':'| Call | Outcome |',cat?'| ---: | --- | --- |':'| ---: | --- |');
-      for(const c of windowRows(r))lines.push('| '+c.n+' | '+(cat?c.kind+' | ':'')+c.state+' |');}
-    lines.push('','Returned = a tool response was recorded; success is not implied.');
-    if(coverage(r))lines.push('Partial input: '+coverage(r)+'.');
-    lines.push('','Generated locally with Agent Bugcard. No transcript text included.');return lines.join('\n');
+  function label(number, singular) {
+    return number + ' ' + singular + (number === 1 ? '' : 's');
   }
-  function svg(r,o={}){
-    const show=o.nearby!==false,cat=o.categories!==false,rows=show?windowRows(r):[];
-    const ink='#eaf3e8',secondary='#abc2b4',muted='#8eae9d',acid='#d6f587',warn='#ffbd9d',w=720;
-    const y0=205, base=show?y0+rows.length*36+9:166,partial=coverage(r),h=base+58+(partial?20:0);
-    const txt=(x,y,s,size=15,col=ink,weight=500,mono=false)=>'<text x="'+x+'" y="'+y+'" font-family="'+(mono?'monospace':'Arial, sans-serif')+'" font-size="'+size+'" font-weight="'+weight+'" fill="'+col+'">'+s+'</text>';
-    const rule=y=>'<path d="M28 '+y+'H692" stroke="#3c594d"/>';
-    let body='<title>Agent Bugcard: '+r.format+'; '+r.count+' calls and '+r.errors+' reported errors</title><rect width="720" height="'+h+'" rx="13" fill="#18372c"/>';
-    body+=txt(28,33,'AGENT BUGCARD   /   DIAGNOSTIC RECEIPT',13,acid,650,true)+txt(565,33,r.format,15,ink,700)+rule(50);
-    const m=[[28,r.count,'TOOL CALLS'],[258,r.errors,'REPORTED ERRORS'],[484,r.unpaired,'UNPAIRED CALLS']];
-    for(const [x,n,l] of m)body+=txt(x,109,n,46,l==='REPORTED ERRORS'&&n?warn:ink,700)+txt(x,134,l,13,secondary,600,true);
-    body+=rule(152);
-    if(show){
-      body+=txt(28,181,caption(r),13,acid,650,true)+txt(545,181,'OUTCOME',12,secondary,600,true);
-      rows.forEach((c,i)=>{const y=y0+i*36,focus=c.state==='Error';
-        if(focus)body+='<rect x="21" y="'+(y-12)+'" width="678" height="32" rx="6" fill="#4b4534"/>';
-        body+=txt(32,y+9,'#'+c.n,16,focus?warn:muted,600,true)+txt(146,y+9,cat?c.kind:'Tool call',19,ink,650)+txt(545,y+9,c.state,16,focus?warn:secondary,650);
-      });body+=rule(base);
+
+  function details(report, options) {
+    const showRows = options.nearby !== false;
+    const showCategories = options.categories !== false;
+    const shareCodes = showRows && showCategories && options.exitCodes === true;
+    const target = report.calls.find(call => call.state === 'Error' && call.n === options.call)
+      || report.calls.find(call => call.state === 'Error');
+    const start = target
+      ? Math.max(0, Math.min(target.n - 3, report.count - 5))
+      : Math.max(0, report.count - 5);
+    const rows = showRows ? report.calls.slice(start, start + 5) : [];
+    const outcome = call => shareCodes && call.exitCode !== undefined && call.state === 'Error'
+      ? 'Error (exit ' + call.exitCode + ')' : call.state;
+    const hints = {
+      126: 'On a POSIX shell, check whether the command can be executed.',
+      127: 'On a POSIX shell, check the command name and PATH.'
+    };
+    return {
+      target: showRows ? target : undefined, rows, showCategories, outcome,
+      hint: shareCodes && target ? hints[target.exitCode] : undefined
+    };
+  }
+
+  function markdown(report, options = {}) {
+    const view = details(report, options);
+    const lines = ['**Agent Bugcard · ' + report.format + '**', ''];
+    if (options.example) lines.push('_Synthetic example_', '');
+    lines.push(label(report.count, 'recognized tool call') + ' · ' +
+      label(report.errors, 'reported error') + ' · ' + label(report.unpaired, 'unpaired call') + '.');
+    if (view.target) {
+      const category = view.showCategories ? ' · ' + view.target.kind : '';
+      lines.push('', '**Call #' + view.target.n + category + ' · ' + view.outcome(view.target) + '**');
+      if (view.hint) lines.push('', 'Next check: ' + view.hint);
     }
-    body+=txt(28,base+22,'Returned = response recorded; success is not implied.',14,secondary);
-    body+=txt(28,base+42,'No transcript text included.',13,muted);
-    if(partial)body+=txt(28,base+61,'Partial input: '+partial+'.',13,warn);
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" role="img">'+body+'</svg>';
+    if (view.rows.length) {
+      const column = view.showCategories ? ' Category |' : '';
+      const divider = view.showCategories ? ' --- |' : '';
+      lines.push('', '| Call |' + column + ' Outcome |', '| ---: |' + divider + ' --- |');
+      for (const call of view.rows) {
+        const category = view.showCategories ? ' ' + call.kind + ' |' : '';
+        lines.push('| ' + call.n + ' |' + category + ' ' + view.outcome(call) + ' |');
+      }
+    }
+    if (view.rows.some(call => call.state === 'Returned')) {
+      lines.push('', 'Returned means a response was recorded.');
+    }
+    if (coverage(report)) lines.push('', 'Partial input: ' + coverage(report) + '.');
+    lines.push('', 'Generated locally with [Agent Bugcard](https://github.com/vighzhen/agent-bugcard).');
+    return lines.join('\n');
+  }
+
+  function svg(report, options = {}) {
+    const view = details(report, options);
+    const ink = '#f3f1e9', muted = '#c1cfc6', green = '#ddedab', orange = '#ffbd98';
+    const xml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const text = (x, y, value, size, color = ink, weight = 500, mono = false) =>
+      '<text x="' + x + '" y="' + y + '" font-family="' + (mono ? 'monospace' : 'Arial, sans-serif') +
+      '" font-size="' + size + '" font-weight="' + weight + '" fill="' + color + '">' + xml(value) + '</text>';
+    const line = y => '<path d="M26 ' + y + 'H694" stroke="#4b6056"/>';
+    const draw = [];
+    draw.push(text(26, 33, 'Agent Bugcard', 20, green, 700), text(543, 33, report.format, 15, muted, 600), line(49));
+    let y = 87;
+    if (view.target) {
+      const kind = view.showCategories ? '  /  ' + view.target.kind : '';
+      draw.push(text(26, y, 'Call #' + view.target.n + kind + '  /  ' + view.outcome(view.target), 29, ink, 700));
+      y += 32;
+      if (view.hint) {
+        draw.push(text(26, y, view.hint, 18, green, 600));
+        y += 33;
+      }
+    }
+    draw.push(text(26, y, label(report.count,'call') + '   ·   ' + label(report.errors,'reported error') +
+      '   ·   ' + report.unpaired + ' unpaired', 18, muted));
+    y += 19;
+    if (view.rows.length) {
+      draw.push(line(y));
+      y += 24;
+      draw.push(text(32, y, 'CALL', 12, muted, 650, true),
+        text(138, y, view.showCategories ? 'CATEGORY' : '', 12, muted, 650, true),
+        text(449, y, 'OUTCOME', 12, muted, 650, true));
+      for (const call of view.rows) {
+        y += 34;
+        const selected = call === view.target;
+        if (selected) draw.push('<rect x="18" y="' + (y - 23) + '" width="684" height="31" rx="5" fill="#4a4438"/>');
+        draw.push(text(32,y,'#'+call.n,17,selected ? orange : muted,600,true),
+          text(138,y,view.showCategories ? call.kind : '',17,ink,600),
+          text(449,y,view.outcome(call),17,call.state === 'Error' ? orange : muted,600));
+      }
+      y += 18;
+    }
+    draw.push(line(y));
+    if (coverage(report)) {
+      y += 23;
+      draw.push(text(26, y, 'Partial input: ' + coverage(report) + '.', 14, orange));
+    }
+    y += 25;
+    const note = view.rows.some(call => call.state === 'Returned') ? 'Returned = response recorded.' : 'Generated locally.';
+    draw.push(text(26, y, note, 14, muted));
+    if(options.example) draw.push(text(535,y,'Synthetic example',14,muted,600));
+    const height = y + 18;
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 ' + height + '" width="720" height="' +
+      height + '" role="img"><title>' + xml(report.format) + ' tool-call receipt</title><rect width="720" height="' +
+      height + '" rx="13" fill="#20372e"/>' + draw.join('') + '</svg>';
   }
   return {parse,notice,markdown,svg,limit};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=Bugcard;
-</script><script>const DEMOS={"claude":"{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-a\",\"name\":\"Read\",\"input\":{\"file_path\":\"example.js\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-a\",\"content\":\"Example source text.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-b\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-b\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-c\",\"name\":\"Bash\",\"input\":{\"command\":\"npm test\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-c\",\"is_error\":true,\"content\":\"Example failure: test did not pass.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-d\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-d\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-e\",\"name\":\"Bash\",\"input\":{\"command\":\"npm test\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-e\",\"content\":\"Example tests passed.\"}]}}\n","codex":"{\"timestamp\":\"2026-01-01T00:00:00Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"npm test\\\"}\",\"call_id\":\"sample-a\"}}\n{\"timestamp\":\"2026-01-01T00:00:01Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call_output\",\"call_id\":\"sample-a\",\"output\":\"Chunk ID: 123abc\\nWall time: 0.01 seconds\\nProcess exited with code 1\\nOutput:\\nExample failure\"}}\n{\"timestamp\":\"2026-01-01T00:00:02Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call\",\"name\":\"apply_patch\",\"input\":\"example patch omitted\",\"call_id\":\"sample-b\"}}\n{\"timestamp\":\"2026-01-01T00:00:03Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call_output\",\"call_id\":\"sample-b\",\"output\":\"Updated the synthetic fixture.\"}}\n{\"timestamp\":\"2026-01-01T00:00:04Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"npm test\\\"}\",\"call_id\":\"sample-c\"}}\n"};
+</script><script>const DEMOS={"claude":"{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-a\",\"name\":\"Read\",\"input\":{\"file_path\":\"example.js\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-a\",\"content\":\"Example source text.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-b\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-b\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-c\",\"name\":\"Bash\",\"input\":{\"command\":\"sample-check\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-c\",\"is_error\":true,\"content\":\"Exit code 127\\nsh: sample-check: command not found\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-d\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-d\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-e\",\"name\":\"Bash\",\"input\":{\"command\":\"npm test\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-e\",\"content\":\"Example tests passed.\"}]}}\n","codex":"{\"timestamp\":\"2026-01-01T00:00:00Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"npm test\\\"}\",\"call_id\":\"sample-a\"}}\n{\"timestamp\":\"2026-01-01T00:00:01Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call_output\",\"call_id\":\"sample-a\",\"output\":\"Chunk ID: 123abc\\nWall time: 0.01 seconds\\nProcess exited with code 126\\nOutput:\\nPermission denied\"}}\n{\"timestamp\":\"2026-01-01T00:00:02Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call\",\"name\":\"apply_patch\",\"input\":\"example patch omitted\",\"call_id\":\"sample-b\"}}\n{\"timestamp\":\"2026-01-01T00:00:03Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call_output\",\"call_id\":\"sample-b\",\"output\":\"Updated the synthetic fixture.\"}}\n{\"timestamp\":\"2026-01-01T00:00:04Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"npm test\\\"}\",\"call_id\":\"sample-c\"}}\n"};
 'use strict';
 const el=id=>document.getElementById(id);
 let report=null, source='',epoch=0;

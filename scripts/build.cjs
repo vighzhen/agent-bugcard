@@ -11,4 +11,4 @@ html=inject(html,'/*INSERT_CORE*/',read('src/core.cjs'));
 html=inject(html,'/*INSERT_DEMOS*/',JSON.stringify(demos).replace(/</g,'\\u003c'));
 html=inject(html,'/*INSERT_UI*/',read('src/ui.js'));
 write('docs/index.html',html);
-write('docs/sample.svg',core.svg(core.parse(demos.claude),{})+'\n');
+write('docs/sample.svg',core.svg(core.parse(demos.claude),{exitCodes:true,example:true})+'\n');
