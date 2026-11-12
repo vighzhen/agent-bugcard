@@ -1,0 +1,10 @@
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"demo-a","name":"Read","input":{"file_path":"example.js"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"demo-a","content":"Example source text."}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"demo-b","name":"Edit","input":{}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"demo-b","content":"Updated example."}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"demo-c","name":"Bash","input":{"command":"npm test"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"demo-c","is_error":true,"content":"Example failure: test did not pass."}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"demo-d","name":"Edit","input":{}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"demo-d","content":"Updated example."}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"demo-e","name":"Bash","input":{"command":"npm test"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"demo-e","content":"Example tests passed."}]}}
