@@ -1,6 +1,6 @@
 # Agent Bugcard · 工具报错诊断卡
 
-[**打开简体中文演示**](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hans) · [备用入口](https://rawcdn.githack.com/vighzhen/agent-bugcard/v0.3.0/docs/index.html?lang=zh-Hans) · [离线压缩包](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard-offline.zip) · [繁體中文](README.zh-Hant.md) · [English](README.md)
+[**打开简体中文演示**](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hans) · [备用单文件下载](https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html) · [离线压缩包](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard-offline.zip) · [繁體中文](README.zh-Hant.md) · [English](README.md)
 
 Claude Code 或 Codex CLI 报错时，把失败的那一步发给同事。工具在你的电脑上读取会话，把调用顺序、工具类别和你选中的退出码整理成一张卡。命令、文件路径和原始对话留在本机。
 
@@ -15,6 +15,14 @@ Claude Code 或 Codex CLI 报错时，把失败的那一步发给同事。工具
 3. 发微信群或飞书时，点 **复制群聊文本** 或 **保存图片 PNG**。贴 GitHub Issue 或支持 Markdown 的工单时，点 **复制 Markdown**。在正文补一句你期待发生什么，就可以交给维护者。
 
 浏览器不允许直接复制时，页面会选中原文，电脑可按 Ctrl+C 或 ⌘C，手机可长按复制。通过聊天软件收到压缩包时，先解压，再用电脑浏览器打开 `agent-bugcard.html`。演示、解析和导出都能断网使用。
+
+## 从备用地址获取离线文件
+
+若演示或 Releases 打不开，可以从备用 CDN 获取同一份 HTML。浏览器可能显示源代码；用“另存为”保存为 `agent-bugcard.html`（文件类型选“所有文件”），再双击打开。Windows 也可以在 PowerShell 中运行：
+
+```powershell
+curl.exe -fL "https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html" -o agent-bugcard.html
+```
 
 ## 会话文件在哪里？
 
