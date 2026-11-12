@@ -1,6 +1,6 @@
 # Agent Bugcard · 工具錯誤診斷卡
 
-[**開啟繁體中文示範**](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hant) · [備用單檔下載](https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html) · [離線壓縮檔](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard-offline.zip) · [简体中文](README.zh-CN.md) · [English](README.md)
+[**開啟繁體中文示範**](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hant) · [備用單檔下載](https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html) · [離線壓縮檔](https://vighzhen.github.io/agent-bugcard/agent-bugcard-offline.zip) · [简体中文](README.zh-CN.md) · [English](README.md)
 
 遇到 Claude Code 或 Codex CLI 出錯時，可以把失敗的步驟整理給同事。工具會在你的電腦上讀取工作階段，依照你選擇的欄位產生診斷卡。原始對話、指令及檔案路徑都留在本機。
 
@@ -18,7 +18,7 @@ Claude 範例出現結束碼 **127**，可以先確認指令名稱與 PATH。切
 
 ## 從備用位址取得離線檔案
 
-若示範網站或 Releases 無法開啟，可從備用 CDN 取得相同的 HTML。瀏覽器可能顯示原始碼；請以「另存新檔」儲存為 `agent-bugcard.html`（檔案類型選「所有檔案」），再以瀏覽器開啟。Windows 的 PowerShell 也可以執行：
+建議優先使用上方的正式示範或站內離線壓縮檔。若你的網路無法開啟，可從備用 CDN 取得相同的 HTML。瀏覽器可能顯示原始碼；請以「另存新檔」儲存為 `agent-bugcard.html`（檔案類型選「所有檔案」），再以瀏覽器開啟。Windows 的 PowerShell 也可以執行：
 
 ```powershell
 curl.exe -fL "https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html" -o agent-bugcard.html

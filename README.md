@@ -4,7 +4,7 @@
 
 Turn a **Claude Code or Codex CLI failure into a GitHub issue attachment**. The tool reads one session file on your machine and shows which tool call failed. You choose whether to include nearby calls, tool categories and shell exit codes. Your prompts, commands, paths and raw output stay private.
 
-[**Try the demo with a sample session**](https://vighzhen.github.io/agent-bugcard/) · [Download the offline HTML](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html) · [Offline ZIP](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard-offline.zip)
+[**Try the demo with a sample session**](https://vighzhen.github.io/agent-bugcard/) · [Download the offline HTML](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html) · [Offline ZIP](https://vighzhen.github.io/agent-bugcard/agent-bugcard-offline.zip)
 
 ![Synthetic Claude Code example. Call 3, Shell, returned exit 127. The suggested next check is the command name and PATH.](docs/sample.svg)
 
@@ -50,6 +50,7 @@ Did a real case need another field? Tell us which follow-up question the card le
 ```sh
 npm test
 npm run build
+python3 scripts/pack-offline.py docs/agent-bugcard-offline.zip
 ```
 
 MIT licensed. Independent project.
