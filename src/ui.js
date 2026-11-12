@@ -46,7 +46,8 @@ function render() {
   const sharing = options();
   const ready = Boolean(report?.count);
   const ct = (key,values) => BugcardLanguages.text(sharing.lang,key,values);
-  for (const id of ['copy','copyText','saveSvg','saveMd']) element(id).disabled = !ready;
+  for (const id of ['copy','copyText','savePng','saveSvg','saveMd']) element(id).disabled = !ready;
+  document.querySelector('.issue').classList.toggle('example-mode',sharing.example);
   element('card').lang = sharing.lang;
   element('nearby').disabled = !ready;
   element('categories').disabled = !ready || !sharing.nearby;
@@ -162,12 +163,37 @@ function download(format) {
   if (!report?.count) return;
   const body = (format === 'svg' ? Bugcard.svg : Bugcard.markdown)(report,options());
   const type = format === 'svg' ? 'image/svg+xml' : 'text/markdown';
-  const url = URL.createObjectURL(new Blob([body+'\n'],{type}));
+  saveBlob(new Blob([body+'\n'],{type}),format);
+}
+function saveBlob(blob, format) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = 'agent-bugcard.' + format;
   link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function downloadPng() {
+  if (!report?.count) return;
+  const request = revision;
+  const sharing = options();
+  const stillCurrent = () => revision === request && JSON.stringify(sharing) === JSON.stringify(options());
+  try {
+    const drawing = new Image();
+    const loaded = new Promise((resolve,reject) => { drawing.onload = resolve; drawing.onerror = reject; });
+    drawing.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Bugcard.svg(report, sharing));
+    await loaded;
+    if (!stillCurrent()) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = drawing.naturalWidth * 2;
+    canvas.height = drawing.naturalHeight * 2;
+    canvas.getContext('2d').drawImage(drawing, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+    if (!blob) throw new Error('PNG unavailable');
+    if (stillCurrent()) saveBlob(blob, 'png');
+  } catch {
+    if (stillCurrent()) element('feedback').textContent = t('pngError');
+  }
 }
 async function copy(kind) {
   if (!report?.count) return;
@@ -190,13 +216,16 @@ async function copy(kind) {
 }
 element('copy').onclick = () => copy('md');
 element('copyText').onclick = () => copy('text');
+element('savePng').onclick = downloadPng;
 element('saveSvg').onclick = () => download('svg');
 element('saveMd').onclick = () => download('md');
-// Download the static document itself, never a serialization of a user's loaded session.
-const offlineAddress = new URL(location.href);
-offlineAddress.hash = '';
-offlineAddress.search = '';
-if (offlineAddress.pathname.endsWith('/')) offlineAddress.pathname += 'index.html';
-element('offline').href = offlineAddress.href;
+// Rebuild from static build inputs only. Never serialize a live DOM containing a local receipt.
+element('offline').onclick = () => {
+  const layoutSource = element('offline-layout').textContent;
+  const program = element('app-source').textContent;
+  const layout = JSON.parse(layoutSource);
+  const html = layout.replace(/\/\*INSERT_(LAYOUT|SCRIPT)\*\//g, (_,part) => part === 'LAYOUT' ? layoutSource : program);
+  saveBlob(new Blob([html],{type:'text/html;charset=utf-8'}),'html');
+};
 applyLanguage();
 demo('claude');

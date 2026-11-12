@@ -5,7 +5,7 @@ const BugcardLanguages = (() => {
   const columns = ['en', 'zh-Hans', 'zh-Hant'];
   const rows = {
     title: ['Agent Bugcard · Share an agent error', 'Agent Bugcard · 工具报错诊断卡', 'Agent Bugcard · 工具錯誤診斷卡'],
-    hero: ['Turn an agent error into a bug report.', '把工具报错整理成一张卡', '把工具錯誤整理成一張卡'],
+    hero: ['Turn an agent error into a bug report.', '把工具报错做成诊断卡', '將工具錯誤做成診斷卡'],
     intro: ['Choose a Claude Code or Codex CLI session. Copy the failing call into an issue or team chat. Commands, paths and conversations stay on your machine.', '选择 Claude Code 或 Codex CLI 会话，把出错的那一步贴进 Issue、工单或群聊。命令、路径和原始对话都留在本机。', '選擇 Claude Code 或 Codex CLI 工作階段，把出錯的步驟貼到 Issue、工單或群組聊天。指令、路徑與原始對話都留在本機。'],
     repo: ['GitHub ↗', '项目源码 ↗', '專案原始碼 ↗'],
     language: ['Language', '界面语言', '介面語言'],
@@ -22,6 +22,9 @@ const BugcardLanguages = (() => {
     attachment: ['Issue attachment', '诊断卡', '診斷卡'],
     copyMd: ['Copy for GitHub issue', '复制 Markdown', '複製 Markdown'],
     copyText: ['Copy for chat', '复制群聊文本', '複製聊天純文字'],
+    savePng: ['Save PNG','保存图片 PNG','儲存圖片 PNG'],
+    pngError: ['Could not create the PNG in this browser. Try Save SVG.','当前浏览器未能生成 PNG，可以改选“保存 SVG”。','目前瀏覽器無法產生 PNG，可改用「儲存 SVG」。'],
+    more: ['Other files','其他文件格式','其他檔案格式'],
     saveSvg: ['Save SVG', '保存 SVG', '儲存 SVG'],
     saveMd: ['Save Markdown', '保存 Markdown', '儲存 Markdown'],
     exact: ['Preview exact Markdown', '查看完整 Markdown', '檢視完整 Markdown'],

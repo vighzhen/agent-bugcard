@@ -1,31 +1,37 @@
-# Agent Bugcard
+# Agent Bugcard · 工具报错诊断卡
 
-把 Claude Code 或 Codex CLI 的一次失败做成能贴进 GitHub issue 的附件。Bugcard 在本地读取一份会话文件，找出哪个工具调用报了错。你可以选择分享相邻调用、工具类别和 shell 退出码，提示词、命令、路径与输出正文都留在自己的机器上。
+[**打开简体中文演示**](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hans) · [备用入口](https://rawcdn.githack.com/vighzhen/agent-bugcard/v0.3.0/docs/index.html?lang=zh-Hans) · [离线压缩包](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard-offline.zip) · [繁體中文](README.zh-Hant.md) · [English](README.md)
 
-[**用虚构样例直接试**](https://vighzhen.github.io/agent-bugcard/) · [下载离线 HTML](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html) · [English](README.md)
+Claude Code 或 Codex CLI 报错时，把失败的那一步发给同事。工具在你的电脑上读取会话，把调用顺序、工具类别和你选中的退出码整理成一张卡。命令、文件路径和原始对话留在本机。
 
-![虚构示例。第 3 次 Shell 调用返回 127，可以先检查命令名和 PATH。](docs/sample.svg)
+![虚构示例：第 3 次命令行调用报错，退出码为 127，可以先确认能否在 PATH 中找到这条命令。](docs/sample.zh-Hans.svg)
 
-示例中，第 3 次 Shell 调用返回了 127，维护者可以先问“这个命令在 agent 的 PATH 里吗？”切换到 Codex 样例，退出码变成 126，第一步就可以查文件能否执行。这些是 POSIX shell 下的排查方向，程序也能主动返回这些数值。[Bash 退出码说明](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html)
+先试内置示例。Claude 示例的退出码是 **127**，可以先查命令名和 PATH。切到 Codex 示例，退出码是 **126**，排查方向变成了文件类型和执行权限。这些是 POSIX shell 下的排查建议，程序也可以自行返回同一个数字。
 
-## 贴进 issue
+## 发到群聊、工单或 Issue
 
-1. 打开在线演示，或下载 HTML 后双击离线运行。内置的两份日志都是虚构的。
-2. 点 **Open local JSONL** 选择一个已保存的会话，最大 20 MiB。每次打开自己的文件，退出码都默认隐藏。如果有多次失败，用 **Focus on** 选中本次要报告的调用。
-3. 勾选愿意分享的字段，查看预览，点 **Copy for GitHub issue**。在 issue 里粘贴，再用一句话补上你原本期待的结果。也可以下载 SVG 或 Markdown。
+1. 打开演示，点 **Claude 示例** 或 **Codex 示例**。处理自己的问题时，点 **打开本地日志** 选择一份 JSONL 文件。真实文件的退出码默认隐藏。
+2. 选择要分享的调用、类别和退出码。界面和卡片的语言可以分别设置，例如用中文操作，给英文项目生成英文报告。
+3. 发微信群或飞书时，点 **复制群聊文本** 或 **保存图片 PNG**。贴 GitHub Issue 或支持 Markdown 的工单时，点 **复制 Markdown**。在正文补一句你期待发生什么，就可以交给维护者。
 
-Claude Code 的会话通常在 `~/.claude/projects/` 子目录下，Codex CLI 通常在 `~/.codex/sessions/年/月/日/`。Windows 从当前用户文件夹进入对应目录。如果设置了 `CLAUDE_CONFIG_DIR` 或 `CODEX_HOME`，请到自定义的根目录查找。
+浏览器不允许直接复制时，页面会选中原文，电脑可按 Ctrl+C 或 ⌘C，手机可长按复制。通过聊天软件收到压缩包时，先解压，再用电脑浏览器打开 `agent-bugcard.html`。演示、解析和导出都能断网使用。
+
+## 会话文件在哪里？
+
+| 工具 | macOS / Linux | Windows 文件资源管理器地址栏 |
+| --- | --- | --- |
+| Claude Code | `~/.claude/projects/` | `%USERPROFILE%\.claude\projects` |
+| Codex CLI | `~/.codex/sessions/` | `%USERPROFILE%\.codex\sessions` |
+
+进入相应子目录选择一份日志，最大 20 MiB。若设置了 `CLAUDE_CONFIG_DIR` 或 `CODEX_HOME`，请从相应的自定义目录查找。页面里的 **在哪里找会话文件？** 也有路径说明。
 
 ## 命令行
 
 需要 Node.js 18+。在克隆下来的项目目录运行：
 
 ```sh
-node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --exit-codes
-node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --call 3 --exit-codes --format svg > receipt.svg
-node bin/agent-bugcard.cjs path/to/session.jsonl --summary-only
+node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hans --exit-codes --format text
+node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hans --call 3 --exit-codes --format svg > receipt.svg
 ```
 
-**Error** 表示日志里有明确的工具失败信号。**Returned** 表示工具给出了响应。**Unpaired** 表示没找到对应的完成记录。遇到不认识的输出格式，工具可能无法识别失败。只分享统计或隐藏工具类别时，退出码和排查提示也会一起隐藏。
-
-如果这张卡还缺一个能让你继续排查的字段，欢迎告诉我们你需要追问什么。报告解析问题时请使用自己编的最小样例。[提交反馈](https://github.com/vighzhen/agent-bugcard/issues)
+**已返回**表示有工具响应，执行结果仍需确认。**未配对**表示没有找到对应的完成记录。程序只显示能识别的失败信号。报告解析问题时请用自己编的最小样例。[反馈问题](https://github.com/vighzhen/agent-bugcard/issues)

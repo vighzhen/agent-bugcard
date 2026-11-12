@@ -1,8 +1,10 @@
 # Agent Bugcard
 
+[简体中文说明](README.zh-CN.md) · [繁體中文說明](README.zh-Hant.md) · [直接试用中文版](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hans)
+
 Turn a **Claude Code or Codex CLI failure into a GitHub issue attachment**. The tool reads one session file on your machine and shows which tool call failed. You choose whether to include nearby calls, tool categories and shell exit codes. Your prompts, commands, paths and raw output stay private.
 
-[**Try the demo with a sample session**](https://vighzhen.github.io/agent-bugcard/) · [Download the offline HTML](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html) · [中文说明](README.zh-CN.md)
+[**Try the demo with a sample session**](https://vighzhen.github.io/agent-bugcard/) · [Download the offline HTML](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html) · [Offline ZIP](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard-offline.zip)
 
 ![Synthetic Claude Code example. Call 3, Shell, returned exit 127. The suggested next check is the command name and PATH.](docs/sample.svg)
 
@@ -12,7 +14,7 @@ Turn a **Claude Code or Codex CLI failure into a GitHub issue attachment**. The 
 
 1. Open the demo or double-click the downloaded HTML to work offline. Both bundled examples are synthetic.
 2. Choose **Open local JSONL** and select the session where the problem happened. Exit codes start hidden for every local file. If several calls reported errors, use **Focus on** to choose the call you want to report.
-3. Review the sharing options and select **Copy for GitHub issue**. Paste the Markdown alongside a sentence describing what you expected. You can also save a standalone SVG or Markdown file.
+3. Review the sharing options and select **Copy for GitHub issue**. Paste the Markdown alongside a sentence describing what you expected. For team chats, copy plain text or save a PNG. The card language can differ from your interface. SVG and Markdown files are available under **Other files**.
 
 **Finding your session.** Claude Code usually stores JSONL under `~/.claude/projects/`. Codex CLI uses `~/.codex/sessions/YYYY/MM/DD/`. On Windows, start in your user folder. If you configured `CLAUDE_CONFIG_DIR` or `CODEX_HOME`, use that base folder. Open one saved session up to 20 MiB. [Claude configuration](https://code.claude.com/docs/en/settings) · [Codex environment variables](https://developers.openai.com/codex/environment-variables)
 
@@ -22,6 +24,7 @@ Node.js 18+ is sufficient. From a clone of this repository:
 
 ```sh
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --exit-codes
+node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hans --format text
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --call 3 --exit-codes --format svg > receipt.svg
 node bin/agent-bugcard.cjs path/to/session.jsonl --summary-only > receipt.md
 ```
