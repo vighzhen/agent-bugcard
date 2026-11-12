@@ -7,7 +7,7 @@
 <title>Agent Bugcard · A private log to a GitHub issue</title>
 <meta name="description" content="Turn local Claude Code and Codex CLI tool failures into a small GitHub issue attachment. Review the calls and optional exit codes before copying.">
 <style>
-:root{color-scheme:light;--paper:#f7f6ef;--panel:#fffef9;--ink:#1b3026;--green:#275c40;--muted:#43564c;--rule:#c5cbbf;--mono:ui-monospace,SFMono-Regular,Consolas,monospace;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+:root{color-scheme:light;--paper:#f7f6ef;--panel:#fffef9;--ink:#1b3026;--green:#275c40;--muted:#43564c;--rule:#c5cbbf;--mono:ui-monospace,SFMono-Regular,Consolas,monospace;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","PingFang TC","Microsoft YaHei","Microsoft JhengHei",sans-serif}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink)}.wrap{max-width:1080px;margin:auto;padding:0 28px}.top{height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rule)}.brand{display:flex;gap:9px;align-items:center;font-weight:720}.mark{padding:3px 7px;background:var(--ink);color:#ddedab;border-radius:5px;font:700 18px var(--mono)}a{color:var(--green);text-underline-offset:3px}.top a{font-size:14px}
 .intro{margin:32px 0 20px}.intro h1{margin:0 0 9px;font-size:clamp(31px,4.3vw,53px);letter-spacing:-.05em;line-height:1.05}.intro p{font-size:17px;line-height:1.5;margin:0;max-width:790px;color:var(--muted)}.toolbar,.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.toolbar{margin-bottom:5px}.finder{border:0;padding:4px 0 12px}.finder summary{color:var(--green);font-size:13px}.actions{margin:15px 0 6px}
 button,.file{border:1px solid #98a99a;border-radius:7px;padding:9px 12px;background:var(--panel);color:var(--ink);cursor:pointer;line-height:1.25;font-family:inherit;font-size:14px;font-weight:650}
@@ -15,26 +15,150 @@ button:hover,.file:hover{background:#e4ebdf}button:disabled{opacity:.48;cursor:n
 [aria-pressed=true]{background:#e1ead7;border-color:var(--green)}.file{position:relative;overflow:hidden}.file input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(240px,.85fr);gap:20px;align-items:start}.receipt{background:#20372e;color:#f3f1e9;border-radius:12px;padding:21px 24px}.receipt h2{margin:13px 0 7px;font-size:clamp(21px,2.5vw,31px);line-height:1.16;letter-spacing:-.035em}.receipt .eyebrow{display:flex;justify-content:space-between;gap:8px;color:#d1ddb9;font:600 12px/1.4 var(--mono)}.receipt p{line-height:1.45;margin:7px 0}.tip{color:#ddedab;font-weight:600}.stats,.legend{color:#c1cfc6}.legend{font-size:13px}.receipt table{border-collapse:collapse;width:100%;margin:13px 0 9px;text-align:left;font-size:15px}.receipt th{color:#c1cfc6;font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;border-top:1px solid #506458;padding:10px 6px 6px}.receipt td{padding:6px}.receipt tr.focus{background:#4a4438;color:#ffd1aa}.receipt td:first-child{font-family:var(--mono)}.settings{background:var(--panel);border:1px solid var(--rule);padding:20px;border-radius:12px}.settings h2{font-size:17px;margin:0 0 13px}.opt{display:flex;align-items:center;gap:8px;font-size:14px;line-height:1.5;margin:8px 0}input{accent-color:var(--green)}select{max-width:100%;color:var(--ink);padding:5px}.muted,details p{font-size:13px;line-height:1.55;color:var(--muted)}.primary{background:var(--ink);color:#fff;border-color:var(--ink)}.primary:hover{background:var(--green)}details{border-top:1px solid var(--rule);padding:11px 0}summary{font-size:14px;font-weight:620;cursor:pointer}pre,textarea{font:13px/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}.settings pre{color:var(--muted);margin-bottom:0}textarea{width:100%;height:15em;background:var(--panel);color:var(--ink);padding:10px}#notice,#feedback{font-size:13px;line-height:1.5;margin:6px 0;color:var(--muted)}[hidden]{display:none!important}footer{margin:27px 0;border-top:1px solid var(--rule);padding:14px 0;color:var(--muted);font-size:13px}
 @media(max-width:740px){.wrap{padding:0 16px}.top{height:49px}.intro{margin:20px 0 14px}.intro p{font-size:15px}.grid{grid-template-columns:1fr;gap:14px}.receipt,.settings{padding:15px}.receipt table{font-size:14px}.toolbar{gap:5px}.toolbar button,.toolbar .file{padding:8px;font-size:13px}.actions button{font-size:13px}.settings{margin-top:2px}}
+.nav{display:flex;gap:16px;align-items:center}.nav select{min-height:32px}.locale-label{display:flex;align-items:center;gap:8px}.finder code{display:inline-block;max-width:100%;overflow-wrap:anywhere}.lang-field{margin:0 0 13px}.lang-field select{width:100%;margin-top:4px}.actions button{min-height:40px}.receipt p:empty{display:none}:lang(zh) .intro h1,:lang(zh) .receipt h2{letter-spacing:0;line-height:1.25}:lang(zh) .intro p{line-height:1.65}.receipt{min-width:0}.receipt td,.receipt th{overflow-wrap:anywhere}.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}footer p{margin:6px 0}
+@media(max-width:420px){.nav{gap:8px}.nav a{font-size:12px}.nav select{font-size:14px}.wrap{padding:0 12px}.receipt table{font-size:13px}.brand{font-size:15px;gap:5px}.actions{gap:6px}.intro{margin-top:17px}}
 </style></head>
 <body><div class="wrap">
-<header class="top"><div class="brand"><span class="mark" aria-hidden="true">::</span> Agent Bugcard</div><a href="https://github.com/vighzhen/agent-bugcard" rel="noreferrer">View on GitHub ↗</a></header>
-<main><div class="intro"><h1>Report an agent failure privately.</h1><p>Turn a Claude Code or Codex CLI session into a GitHub issue attachment. Share the failing tool call and keep your commands, paths, and conversation on your machine.</p></div>
-<div class="toolbar" aria-label="Choose a session"><label class="file">Open local JSONL…<input type="file" id="file" aria-label="Open local JSONL" accept=".jsonl,.ndjson,.json"></label><button id="claude">Claude example</button><button id="codex">Codex example</button></div>
-<details class="finder"><summary>Find my session file</summary><p>Open your user folder and choose one JSONL file from the relevant subfolder (up to 20 MiB). On macOS, press ⌘⇧G in the file picker to enter a folder path.</p><p><b>Claude Code</b> &nbsp;<code>~/.claude/projects/</code><br><b>Codex CLI</b> &nbsp;<code>~/.codex/sessions/</code></p><p>On Windows, use <code>%USERPROFILE%</code> in place of <code>~</code>. A custom <code>CLAUDE_CONFIG_DIR</code> or <code>CODEX_HOME</code> changes the base folder.</p></details>
-<div class="grid"><section aria-label="Issue attachment">
-<div class="receipt" id="card" aria-live="polite"><div class="eyebrow"><span id="source"></span><span id="format"></span></div><h2 id="headline"></h2><p id="tip" class="tip"></p><p id="stats" class="stats"></p><table id="timeline"><thead><tr><th>Call</th><th id="categoryHead">Category</th><th>Outcome</th></tr></thead><tbody id="rows"></tbody></table><p class="legend" id="legend"></p></div>
-<div class="actions"><button id="copy" class="primary">Copy for GitHub issue</button><button id="saveSvg">Save SVG</button><button id="saveMd">Save Markdown</button></div><div id="feedback" role="status"></div>
-<details id="exact"><summary>Preview exact Markdown</summary><textarea id="md" readonly aria-label="Exact Markdown"></textarea></details>
-</section>
-<aside class="settings"><h2>Sharing options</h2><label class="opt" id="focusOpt" hidden>Focus on <select id="focus" aria-label="Choose the reported error"></select></label>
-<label class="opt"><input id="nearby" type="checkbox" checked> Include nearby calls</label><label class="opt"><input id="categories" type="checkbox" checked> Show tool categories</label><label class="opt"><input id="exitCodes" type="checkbox"> Include shell exit codes</label>
-<p id="scope" class="muted"></p><p id="notice" role="status"></p>
-<details id="demoInput"><summary>See the synthetic input</summary><pre id="sampleText"></pre></details>
-
-<details><summary>What stays private?</summary><p>Prompts, replies, commands, raw output, file paths, custom tool names, IDs and timestamps stay out of the receipt. A distinctive sequence of calls can still reveal a workflow. Review the Markdown before sharing.</p></details>
-</aside></div></main><footer>Works offline · No account or telemetry · <a href="https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html" rel="noreferrer">Download offline HTML</a></footer>
+<header class="top"><div class="brand"><span class="mark" aria-hidden="true">::</span> Agent Bugcard</div><nav class="nav"><label class="locale-label"><span data-t="language" class="sr"></span><select id="uiLang" aria-label="Language / 语言 / 語言"><option value="en">English</option><option value="zh-Hans">简体中文</option><option value="zh-Hant">繁體中文</option></select></label><a href="https://github.com/vighzhen/agent-bugcard" rel="noreferrer" data-t="repo"></a></nav></header>
+<main><div class="intro"><h1 data-t="hero"></h1><p data-t="intro"></p></div>
+<div class="toolbar" data-label="choose"><label class="file"><span data-t="file"></span><input type="file" id="file" data-label="file" accept=".jsonl,.ndjson,.json"></label><button id="claude" data-t="claude"></button><button id="codex" data-t="codex"></button></div>
+<details class="finder"><summary data-t="finder"></summary><p data-t="findSize"></p><p>Claude Code &nbsp;<code>~/.claude/projects/</code><br>Codex CLI &nbsp;<code>~/.codex/sessions/</code></p><p data-t="windows"></p><p><code>%USERPROFILE%\.claude\projects</code><br><code>%USERPROFILE%\.codex\sessions</code></p><p data-t="custom"></p></details>
+<div class="grid"><section data-label="attachment">
+<div class="receipt" id="card" aria-live="polite"><div class="eyebrow"><span id="source"></span><span id="format"></span></div><h2 id="headline"></h2><p id="tip" class="tip"></p><p id="stats" class="stats"></p><table id="timeline"><thead><tr><th id="callHead"></th><th id="categoryHead"></th><th id="outcomeHead"></th></tr></thead><tbody id="rows"></tbody></table><p class="legend" id="legend"></p></div>
+<div class="actions"><button id="copy" class="primary" data-t="copyMd"></button><button id="copyText" data-t="copyText"></button><button id="saveSvg" data-t="saveSvg"></button><button id="saveMd" data-t="saveMd"></button></div><div id="feedback" role="status"></div>
+<details id="exact"><summary id="previewLabel"></summary><textarea id="md" readonly></textarea></details></section>
+<aside class="settings"><h2 data-t="options"></h2><label class="lang-field"><span data-t="outputLanguage"></span><select id="cardLang"><option value="auto" data-t="follow"></option><option value="en">English</option><option value="zh-Hans">简体中文</option><option value="zh-Hant">繁體中文</option></select></label>
+<label class="opt" id="focusOpt" hidden><span data-t="focus"></span><select id="focus" data-label="focus"></select></label>
+<label class="opt"><input id="nearby" type="checkbox" checked><span data-t="nearby"></span></label><label class="opt"><input id="categories" type="checkbox" checked><span data-t="categories"></span></label><label class="opt"><input id="exitCodes" type="checkbox"><span data-t="codes"></span></label><p id="scope" class="muted"></p><p id="notice" role="status"></p>
+<details id="demoInput"><summary data-t="sampleInput"></summary><pre id="sampleText"></pre></details>
+<details><summary data-t="privacy"></summary><p data-t="privacyText"></p></details></aside></div></main>
+<footer><p><span data-t="footer"></span> · <a id="offline" href="index.html" download="agent-bugcard.html" data-t="offline"></a> · <a href="https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard-offline.zip" rel="noreferrer" data-t="offlineZip"></a></p><p data-t="offlineHelp"></p></footer>
+<noscript>请启用 JavaScript，或使用命令行工具。請啟用 JavaScript，或使用命令列工具。Enable JavaScript or use the CLI.</noscript>
 </div><script>'use strict';
+
+// Each row contains English, Simplified Chinese, then Traditional Chinese.
+const BugcardLanguages = (() => {
+  const columns = ['en', 'zh-Hans', 'zh-Hant'];
+  const rows = {
+    title: ['Agent Bugcard · Share an agent error', 'Agent Bugcard · 工具报错诊断卡', 'Agent Bugcard · 工具錯誤診斷卡'],
+    hero: ['Turn an agent error into a bug report.', '把工具报错整理成一张卡', '把工具錯誤整理成一張卡'],
+    intro: ['Choose a Claude Code or Codex CLI session. Copy the failing call into an issue or team chat. Commands, paths and conversations stay on your machine.', '选择 Claude Code 或 Codex CLI 会话，把出错的那一步贴进 Issue、工单或群聊。命令、路径和原始对话都留在本机。', '選擇 Claude Code 或 Codex CLI 工作階段，把出錯的步驟貼到 Issue、工單或群組聊天。指令、路徑與原始對話都留在本機。'],
+    repo: ['GitHub ↗', '项目源码 ↗', '專案原始碼 ↗'],
+    language: ['Language', '界面语言', '介面語言'],
+    outputLanguage: ['Card language', '卡片语言', '卡片語言'],
+    follow: ['Same as interface', '跟随界面', '跟隨介面'],
+    choose: ['Choose a session', '选择会话', '選擇工作階段'],
+    file: ['Open local JSONL…', '打开本地日志…', '開啟本機記錄檔…'],
+    claude: ['Claude example', 'Claude 示例', 'Claude 範例'],
+    codex: ['Codex example', 'Codex 示例', 'Codex 範例'],
+    finder: ['Where is my session file?', '在哪里找会话文件？', '去哪裡找工作階段檔案？'],
+    findSize: ['Open one saved JSONL file (up to 20 MiB) from the folders below. On macOS press ⌘⇧G in the file picker to enter the path.', '从以下目录的子文件夹中选择一份 JSONL 日志（最大 20 MiB）。macOS 可在文件选择窗口按 ⌘⇧G 输入路径。', '從下列資料夾的子目錄選取一份 JSONL 記錄檔（最多 20 MiB）。macOS 可在選擇檔案時按 ⌘⇧G 輸入路徑。'],
+    windows: ['On Windows paste a path into File Explorer’s address bar:', 'Windows 可把下列路径粘贴到文件资源管理器的地址栏：', 'Windows 可將下列路徑貼到檔案總管的網址列：'],
+    custom: ['If you set CLAUDE_CONFIG_DIR or CODEX_HOME, start in that folder.', '如果设置了 CLAUDE_CONFIG_DIR 或 CODEX_HOME，请从对应目录查找。', '若已設定 CLAUDE_CONFIG_DIR 或 CODEX_HOME，請從對應的資料夾尋找。'],
+    attachment: ['Issue attachment', '诊断卡', '診斷卡'],
+    copyMd: ['Copy for GitHub issue', '复制 Markdown', '複製 Markdown'],
+    copyText: ['Copy for chat', '复制群聊文本', '複製聊天純文字'],
+    saveSvg: ['Save SVG', '保存 SVG', '儲存 SVG'],
+    saveMd: ['Save Markdown', '保存 Markdown', '儲存 Markdown'],
+    exact: ['Preview exact Markdown', '查看完整 Markdown', '檢視完整 Markdown'],
+    options: ['Sharing options', '分享选项', '分享選項'],
+    focus: ['Focus on', '要报告的失败调用', '要回報的失敗呼叫'],
+    nearby: ['Include nearby calls', '包含前后调用', '包含前後的呼叫'],
+    categories: ['Show tool categories', '显示工具类别', '顯示工具類別'],
+    codes: ['Include shell exit codes', '包含命令退出码', '包含指令結束碼'],
+    sampleInput: ['See the synthetic input', '查看虚构的原始示例', '查看虛構範例的原始內容'],
+    privacy: ['What stays private?', '哪些内容不会被分享？', '哪些內容會留在本機？'],
+    privacyText: ['Prompts, replies, commands, raw output, paths, custom tool names, IDs and timestamps stay out of the card. A distinctive sequence may reveal your workflow. Review the preview before sharing.', '提示词、回复、命令、原始输出、路径、自定义工具名、ID 和时间戳都不会写进卡片。调用顺序仍可能反映工作方式，请预览后再分享。', '提示詞、回覆、指令、原始輸出、路徑、自訂工具名稱、ID 與時間戳記都不會寫入卡片。呼叫順序仍可能反映工作方式，請先預覽再分享。'],
+    offline: ['Save offline HTML', '保存离线工具', '儲存離線工具'],
+    footer: ['Local processing · No account or telemetry', '本机处理 · 不用登录 · 无遥测', '本機處理 · 不用登入 · 無遙測'],
+    offlineHelp: ['Open the saved HTML in a desktop browser. You can also send the offline ZIP to a colleague.', '离线 HTML 用电脑浏览器打开即可。转发给同事时，也可以发送离线压缩包。', '以電腦瀏覽器開啟離線 HTML 即可使用。轉給同事時，也可傳送離線壓縮檔。'],
+    offlineZip: ['Offline ZIP', '下载离线压缩包', '下載離線壓縮檔'],
+    example: ['Synthetic example', '虚构示例', '虛構範例'],
+    local: ['Local session', '本地会话', '本機工作階段'],
+    summary: ['Session summary', '会话摘要', '工作階段摘要'],
+    last: ['Last observed calls', '最近的工具调用', '最近的工具呼叫'],
+    noCard: ['No receipt to export', '没有可导出的诊断卡', '沒有可匯出的診斷卡'],
+    none: ['No supported tool calls found. Choose a Claude Code or Codex CLI session JSONL.', '未找到可识别的工具调用。请选择 Claude Code 或 Codex CLI 的 JSONL 会话文件。', '找不到可辨識的工具呼叫。請選擇 Claude Code 或 Codex CLI 的 JSONL 工作階段檔案。'],
+    large: ['Choose a single JSONL file up to 20 MiB.', '请选择不超过 20 MiB 的单个 JSONL 文件。', '請選擇不超過 20 MiB 的單一 JSONL 檔案。'],
+    loading: ['Reading the file locally…', '正在本机读取文件…', '正在本機讀取檔案…'],
+    unreadable: ['Could not read the selected file.', '无法读取所选文件。', '無法讀取所選檔案。'],
+    summaryScope: ['Only counts, agent format and parsing notes are shared.', '仅分享统计、工具来源和解析提示。', '僅分享統計、工具來源與解析提示。'],
+    codeScope: ['Hiding exit codes also hides their troubleshooting hints.', '隐藏退出码也会隐藏对应的排查建议。', '隱藏結束碼也會隱藏對應的檢查建議。'],
+    noCode: ['This session contains no recognized shell failure code.', '这份会话里没有可识别的命令失败退出码。', '這份工作階段沒有可辨識的指令失敗結束碼。'],
+    copiedMd: ['Copied. Paste into your issue and describe what you expected.', '已复制 Markdown。在 Issue 或工单里粘贴，再补一句你原本期待的结果。', '已複製 Markdown。貼到 Issue 或工單後，可再補充預期結果。'],
+    copiedText: ['Plain text copied. Paste it into your team chat.', '已复制纯文本，可直接粘贴到群聊。', '已複製純文字，可直接貼到群組聊天。'],
+    manual: ['Text selected. Press Ctrl+C or ⌘C, or press and hold to copy.', '已选中文本。按 Ctrl+C、⌘C，或在手机上长按复制。', '已選取文字。按 Ctrl+C、⌘C，或在手機上長按複製。'],
+    textPreview: ['Preview chat text', '查看群聊纯文本', '檢視聊天純文字'],
+    command: ['Command', '命令', '指令'], result: ['Result', '结果', '結果'],
+    call: ['Call','调用','呼叫'], category:['Category','类别','類別'], outcome:['Outcome','状态','狀態'],
+    numbered: ['Call #{n}','第 {n} 次调用','第 {n} 次呼叫'],
+    Error: ['Error','报错','錯誤'], Returned:['Returned','已返回','已傳回'], Unpaired:['Unpaired','未配对','未配對'],
+    Shell:['Shell','命令行','命令列'], Read:['Read','读取','讀取'], Edit:['Edit','编辑','編輯'], Search:['Search','搜索','搜尋'], Fetch:['Fetch','获取','擷取'], Delegate:['Delegate','委派','委派'], Other:['Other','其他','其他'],
+    'Mixed formats':['Mixed formats','混合格式','混合格式'],Unknown:['Unknown','未知','未知'],
+    exit: ['Error (exit {n})','报错（退出码 {n}）','錯誤（結束碼 {n}）'],
+    hint126:['On a POSIX shell, check whether the command can be executed.','若使用 POSIX shell，先检查文件类型和执行权限。','若使用 POSIX shell，先檢查檔案類型與執行權限。'],
+    hint127:['On a POSIX shell, check the command name and PATH.','若使用 POSIX shell，先确认能否在 PATH 中找到这条命令。','若使用 POSIX shell，先確認能否在 PATH 中找到這個指令。'],
+    legend:['Returned means a response was recorded.','“已返回”表示工具给出了响应，执行结果仍需确认。','「已傳回」表示工具已回應，執行結果仍需確認。'],
+    partial:['Partial input','部分输入未能解析','部分輸入未能解析'],
+    invalid:['{n} malformed lines skipped','已跳过 {n} 行无效 JSON','已略過 {n} 行無效 JSON'],
+    unmatched:['{n} unmatched result IDs','有 {n} 个结果找不到对应调用','有 {n} 個結果找不到對應呼叫'],
+    next:['Next check','下一步排查','下一步檢查'],
+    generated:['Generated locally with','本机生成工具','本機產生工具'],
+    localNote:['Generated locally.','在本机生成。','在本機產生。'],
+    svgTitle:['tool-call receipt','工具调用诊断卡','工具呼叫診斷卡'],
+    ready:['Ready for review. Only recognized calls are counted.','可以预览。仅统计可识别的调用。','可開始預覽。僅統計可辨識的呼叫。'],
+    counts:['','{n} 次调用 · {e} 次报错 · {u} 次未配对','{n} 次呼叫 · {e} 次錯誤 · {u} 次未配對'],
+    cliUsage:['Usage','用法','用法'],
+    cliRead:['Could not read the selected file.','无法读取所选文件。','無法讀取所選檔案。'],
+    cliNone:['No supported tool calls found. No card generated.','未找到可识别的工具调用，无法生成诊断卡。','找不到可辨識的工具呼叫，無法產生診斷卡。'],
+    cliNumber:['Choose a positive error call number.','请输入正整数调用编号。','請輸入正整數呼叫編號。'],
+    cliCall:['That call has no reported error. Choose a reported error call number.','该调用没有报错。请选择已报错的调用编号。','該呼叫沒有回報錯誤。請選擇已出錯的呼叫編號。'],
+    cliSize:['Choose a regular JSONL file up to 20 MiB.','请选择不超过 20 MiB 的普通 JSONL 文件。','請選擇不超過 20 MiB 的一般 JSONL 檔案。']
+  };
+
+  function match(tag) {
+    if (typeof tag !== 'string' || !tag) return null;
+    const normalized = tag.trim().replace(/_/g,'-');
+    const parts = normalized.split('-');
+    if (!/^(en|zh|cmn)$/i.test(parts[0])) return null;
+    if (parts[0].toLowerCase() === 'en') return 'en';
+    // Match script before region. Stop before extensions, which can name unrelated regions.
+    const subtags = [];
+    for (const part of parts.slice(1)) {
+      if (part.length === 1) break;
+      subtags.push(part.toLowerCase());
+    }
+    if (subtags.includes('hant') || subtags.includes('cht')) return 'zh-Hant';
+    if (subtags.includes('hans') || subtags.includes('chs')) return 'zh-Hans';
+    return subtags.some(code=>['tw','hk','mo'].includes(code)) ? 'zh-Hant' : 'zh-Hans';
+  }
+  function select(preferences) {
+    for (const tag of preferences) {
+      const supported = match(tag);
+      if (supported) return supported;
+    }
+    return 'en';
+  }
+  function text(lang, key, data = {}) {
+    const row = Object.prototype.hasOwnProperty.call(rows,key) ? rows[key] : null;
+    if (!row) throw new Error('Unknown message key: ' + key);
+    const index = columns.indexOf(lang);
+    return row[index < 0 ? 0 : index].replace(/\{(\w+)\}/g, (_,k)=>String(data[k]));
+  }
+  function counts(lang, report, full = false) {
+    if (lang !== 'en') return text(lang,'counts',{n:report.count,e:report.errors,u:report.unpaired});
+    const plural = (n,s) => n + ' ' + s + (n === 1 ? '' : 's');
+    return plural(report.count,full ? 'recognized tool call' : 'call') + ' · ' +
+      plural(report.errors,'reported error') + ' · ' +
+      (full ? plural(report.unpaired,'unpaired call') : report.unpaired + ' unpaired');
+  }
+  return {columns, match, select, text, counts};
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = BugcardLanguages;
+</script><script>'use strict';
 const Bugcard = (() => {
+  const languages = typeof module !== 'undefined' && module.exports
+    ? require('./locale.cjs') : BugcardLanguages;
   // Only this fixed vocabulary and derived counts may reach either renderer.
   const groups = new Map(Object.entries({
     Bash:'Shell',PowerShell:'Shell',exec_command:'Shell',write_stdin:'Shell',shell:'Shell',shell_command:'Shell',
@@ -174,14 +298,14 @@ const Bugcard = (() => {
       unpaired: rows.filter(call => call.state === 'Unpaired').length, calls: rows, invalid, unmatched
     };
   }
-  function notice(r){
-    const notes=[];if(r.invalid)notes.push(r.invalid+' malformed JSON line(s) skipped.');
-    if(r.unmatched)notes.push(r.unmatched+' result ID(s) without a matching call ignored.');
-    return notes.join(' ')||'Ready for review. Only recognized calls are counted.';
+  function coverage(report, lang = 'en') {
+    const notes = [];
+    if (report.invalid) notes.push(languages.text(lang, 'invalid', {n: report.invalid}));
+    if (report.unmatched) notes.push(languages.text(lang, 'unmatched', {n: report.unmatched}));
+    return notes.join(lang === 'en' ? '; ' : '，');
   }
-  const coverage=r=>[r.invalid?r.invalid+' malformed lines skipped':'',r.unmatched?r.unmatched+' unmatched result IDs':''].filter(Boolean).join('; ');
-  function label(number, singular) {
-    return number + ' ' + singular + (number === 1 ? '' : 's');
+  function notice(report, lang = 'en') {
+    return coverage(report, lang) || languages.text(lang, 'ready');
   }
 
   function details(report, options) {
@@ -194,45 +318,56 @@ const Bugcard = (() => {
       ? Math.max(0, Math.min(target.n - 3, report.count - 5))
       : Math.max(0, report.count - 5);
     const rows = showRows ? report.calls.slice(start, start + 5) : [];
+    const lang = languages.select([options.lang]);
+    const t = (key, data) => languages.text(lang, key, data);
     const outcome = call => shareCodes && call.exitCode !== undefined && call.state === 'Error'
-      ? 'Error (exit ' + call.exitCode + ')' : call.state;
-    const hints = {
-      126: 'On a POSIX shell, check whether the command can be executed.',
-      127: 'On a POSIX shell, check the command name and PATH.'
-    };
+      ? t('exit', {n:call.exitCode}) : t(call.state);
+    const hint = shareCodes && target && [126,127].includes(target.exitCode)
+      ? t('hint' + target.exitCode) : '';
     return {
-      target: showRows ? target : undefined, rows, showCategories, outcome,
-      hint: shareCodes && target ? hints[target.exitCode] : undefined
+      lang, t, target: showRows ? target : undefined, rows, showCategories, outcome, hint,
+      category: call => t(call.kind),
+      format: ['Unknown','Mixed formats'].includes(report.format) ? t(report.format) : report.format
     };
   }
 
-  function markdown(report, options = {}) {
+  function heading(view) {
+    if (!view.target) return '';
+    return [view.t('numbered', {n:view.target.n}), view.showCategories ? view.category(view.target) : '', view.outcome(view.target)]
+      .filter(Boolean).join(' · ');
+  }
+
+  function written(report, options, plain) {
     const view = details(report, options);
-    const lines = ['**Agent Bugcard · ' + report.format + '**', ''];
-    if (options.example) lines.push('_Synthetic example_', '');
-    lines.push(label(report.count, 'recognized tool call') + ' · ' +
-      label(report.errors, 'reported error') + ' · ' + label(report.unpaired, 'unpaired call') + '.');
+    const {lang, t} = view;
+    const bold = content => plain ? content : '**' + content + '**';
+    const colon = lang === 'en' ? ': ' : '：';
+    const lines = [bold('Agent Bugcard · ' + view.format), ''];
+    if (options.example) lines.push(plain ? t('example') : '_' + t('example') + '_', '');
+    lines.push(languages.counts(lang, report, true));
     if (view.target) {
-      const category = view.showCategories ? ' · ' + view.target.kind : '';
-      lines.push('', '**Call #' + view.target.n + category + ' · ' + view.outcome(view.target) + '**');
-      if (view.hint) lines.push('', 'Next check: ' + view.hint);
+      lines.push('', bold(heading(view)));
+      if (view.hint) lines.push('', t('next') + colon + view.hint);
     }
     if (view.rows.length) {
-      const column = view.showCategories ? ' Category |' : '';
-      const divider = view.showCategories ? ' --- |' : '';
-      lines.push('', '| Call |' + column + ' Outcome |', '| ---: |' + divider + ' --- |');
+      lines.push('');
+      const labels = [t('call'), ...(view.showCategories ? [t('category')] : []), t('outcome')];
+      if (!plain) {
+        lines.push('| ' + labels.join(' | ') + ' |', '| ---: | ' + labels.slice(1).map(()=>'---').join(' | ') + ' |');
+      }
       for (const call of view.rows) {
-        const category = view.showCategories ? ' ' + call.kind + ' |' : '';
-        lines.push('| ' + call.n + ' |' + category + ' ' + view.outcome(call) + ' |');
+        const cells = [plain ? '#' + call.n : String(call.n), ...(view.showCategories ? [view.category(call)] : []), view.outcome(call)];
+        lines.push(plain ? cells.join(' · ') : '| ' + cells.join(' | ') + ' |');
       }
     }
-    if (view.rows.some(call => call.state === 'Returned')) {
-      lines.push('', 'Returned means a response was recorded.');
-    }
-    if (coverage(report)) lines.push('', 'Partial input: ' + coverage(report) + '.');
-    lines.push('', 'Generated locally with [Agent Bugcard](https://github.com/vighzhen/agent-bugcard).');
+    if (view.rows.some(call=>call.state==='Returned')) lines.push('', t('legend'));
+    const warnings = coverage(report, lang);
+    if (warnings) lines.push('', t('partial') + colon + warnings);
+    if (!plain) lines.push('', t('generated') + ' [Agent Bugcard](https://github.com/vighzhen/agent-bugcard).');
     return lines.join('\n');
   }
+  function markdown(report, options = {}) { return written(report, options, false); }
+  function plainText(report, options = {}) { return written(report, options, true); }
 
   function svg(report, options = {}) {
     const view = details(report, options);
@@ -243,158 +378,195 @@ const Bugcard = (() => {
       '" font-size="' + size + '" font-weight="' + weight + '" fill="' + color + '">' + xml(value) + '</text>';
     const line = y => '<path d="M26 ' + y + 'H694" stroke="#4b6056"/>';
     const draw = [];
-    draw.push(text(26, 33, 'Agent Bugcard', 20, green, 700), text(543, 33, report.format, 15, muted, 600), line(49));
+    const {t,lang} = view;
+    draw.push(text(26, 33, 'Agent Bugcard', 20, green, 700), text(543, 33, view.format, 15, muted, 600), line(49));
     let y = 87;
     if (view.target) {
-      const kind = view.showCategories ? '  /  ' + view.target.kind : '';
-      draw.push(text(26, y, 'Call #' + view.target.n + kind + '  /  ' + view.outcome(view.target), 29, ink, 700));
+      const kind = view.showCategories ? '  /  ' + view.category(view.target) : '';
+      draw.push(text(26, y, t('numbered', {n:view.target.n}) + kind + '  /  ' + view.outcome(view.target), 29, ink, 700));
       y += 32;
       if (view.hint) {
         draw.push(text(26, y, view.hint, 18, green, 600));
         y += 33;
       }
     }
-    draw.push(text(26, y, label(report.count,'call') + '   ·   ' + label(report.errors,'reported error') +
-      '   ·   ' + report.unpaired + ' unpaired', 18, muted));
+    draw.push(text(26, y, languages.counts(lang, report), 18, muted));
     y += 19;
     if (view.rows.length) {
       draw.push(line(y));
       y += 24;
-      draw.push(text(32, y, 'CALL', 12, muted, 650, true),
-        text(138, y, view.showCategories ? 'CATEGORY' : '', 12, muted, 650, true),
-        text(449, y, 'OUTCOME', 12, muted, 650, true));
+      draw.push(text(32, y, t('call').toUpperCase(), 12, muted, 650, true),
+        text(138, y, view.showCategories ? t('category').toUpperCase() : '', 12, muted, 650, true),
+        text(449, y, t('outcome').toUpperCase(), 12, muted, 650, true));
       for (const call of view.rows) {
         y += 34;
         const selected = call === view.target;
         if (selected) draw.push('<rect x="18" y="' + (y - 23) + '" width="684" height="31" rx="5" fill="#4a4438"/>');
         draw.push(text(32,y,'#'+call.n,17,selected ? orange : muted,600,true),
-          text(138,y,view.showCategories ? call.kind : '',17,ink,600),
+          text(138,y,view.showCategories ? view.category(call) : '',17,ink,600),
           text(449,y,view.outcome(call),17,call.state === 'Error' ? orange : muted,600));
       }
       y += 18;
     }
     draw.push(line(y));
-    if (coverage(report)) {
+    if (coverage(report, lang)) {
       y += 23;
-      draw.push(text(26, y, 'Partial input: ' + coverage(report) + '.', 14, orange));
+      draw.push(text(26, y, t('partial') + ' · ' + coverage(report, lang), 14, orange));
     }
     y += 25;
-    const note = view.rows.some(call => call.state === 'Returned') ? 'Returned = response recorded.' : 'Generated locally.';
+    const note = view.rows.some(call => call.state === 'Returned') ? t('legend') : t('localNote');
     draw.push(text(26, y, note, 14, muted));
-    if(options.example) draw.push(text(535,y,'Synthetic example',14,muted,600));
+    if(options.example) draw.push(text(535,y,t('example'),14,muted,600));
     const height = y + 18;
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 ' + height + '" width="720" height="' +
-      height + '" role="img"><title>' + xml(report.format) + ' tool-call receipt</title><rect width="720" height="' +
+    return '<svg xmlns="http://www.w3.org/2000/svg" xml:lang="' + lang + '" viewBox="0 0 720 ' + height + '" width="720" height="' +
+      height + '" role="img"><title>' + xml(view.format) + ' ' + t('svgTitle') + '</title><rect width="720" height="' +
       height + '" rx="13" fill="#20372e"/>' + draw.join('') + '</svg>';
   }
-  return {parse,notice,details,markdown,svg,limit};
+  return {parse,notice,details,heading,markdown,plainText,svg,limit};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=Bugcard;
 </script><script>const DEMOS={"claude":"{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-a\",\"name\":\"Read\",\"input\":{\"file_path\":\"example.js\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-a\",\"content\":\"Example source text.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-b\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-b\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-c\",\"name\":\"Bash\",\"input\":{\"command\":\"sample-check\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-c\",\"is_error\":true,\"content\":\"Exit code 127\\nsh: sample-check: command not found\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-d\",\"name\":\"Edit\",\"input\":{}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-d\",\"content\":\"Updated example.\"}]}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"demo-e\",\"name\":\"Bash\",\"input\":{\"command\":\"npm test\"}}]}}\n{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"demo-e\",\"content\":\"Example tests passed.\"}]}}\n","codex":"{\"timestamp\":\"2026-01-01T00:00:00Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"./sample-check\\\"}\",\"call_id\":\"sample-a\"}}\n{\"timestamp\":\"2026-01-01T00:00:01Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call_output\",\"call_id\":\"sample-a\",\"output\":\"Chunk ID: 123abc\\nWall time: 0.01 seconds\\nProcess exited with code 126\\nOutput:\\nPermission denied\"}}\n{\"timestamp\":\"2026-01-01T00:00:02Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call\",\"name\":\"apply_patch\",\"input\":\"example patch omitted\",\"call_id\":\"sample-b\"}}\n{\"timestamp\":\"2026-01-01T00:00:03Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"custom_tool_call_output\",\"call_id\":\"sample-b\",\"output\":\"Updated the synthetic fixture.\"}}\n{\"timestamp\":\"2026-01-01T00:00:04Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"./sample-check\\\"}\",\"call_id\":\"sample-c\"}}\n"};
 'use strict';
 
 const element = id => document.getElementById(id);
+const preferenceKey = 'agent-bugcard-ui-language';
 let report = null;
 let source = '';
 let revision = 0;
+let noticeKey = '';
+let previewKind = 'md';
+let uiLanguage = initialLanguage();
 
+function initialLanguage() {
+  const requested = new URLSearchParams(location.search).get('lang');
+  let preference = '';
+  try { preference = localStorage.getItem(preferenceKey); } catch { /* Optional on file URLs. */ }
+  return BugcardLanguages.select([requested, preference, ...(navigator.languages || []), navigator.language]);
+}
+function t(key, values) { return BugcardLanguages.text(uiLanguage,key,values); }
+function applyLanguage() {
+  document.documentElement.lang = uiLanguage;
+  document.title = t('title');
+  document.querySelector('meta[name=description]').content = t('intro');
+  element('uiLang').value = uiLanguage;
+  for (const node of document.querySelectorAll('[data-t]')) node.textContent = t(node.dataset.t);
+  for (const node of document.querySelectorAll('[data-label]')) node.setAttribute('aria-label',t(node.dataset.label));
+  for (const option of element('focus').options) option.textContent = t('numbered',{n:option.value});
+}
 function options() {
+  const choice = element('cardLang').value;
   return {
-    nearby: element('nearby').checked,
-    categories: element('categories').checked,
-    exitCodes: element('exitCodes').checked,
-    call: Number(element('focus').value),
+    lang: choice === 'auto' ? uiLanguage : choice,
+    nearby: element('nearby').checked, categories: element('categories').checked,
+    exitCodes: element('exitCodes').checked, call: Number(element('focus').value),
     example: source === 'claude' || source === 'codex'
   };
 }
-
+function writePreview() {
+  const opts = options();
+  const plain = previewKind === 'text';
+  element('previewLabel').textContent = t(plain ? 'textPreview' : 'exact');
+  element('md').setAttribute('aria-label', element('previewLabel').textContent);
+  element('md').lang = opts.lang;
+  element('md').value = report?.count ? (plain ? Bugcard.plainText : Bugcard.markdown)(report,opts) : '';
+}
 function render() {
   const sharing = options();
   const ready = Boolean(report?.count);
-  for (const id of ['copy','saveSvg','saveMd']) element(id).disabled = !ready;
+  const ct = (key,values) => BugcardLanguages.text(sharing.lang,key,values);
+  for (const id of ['copy','copyText','saveSvg','saveMd']) element(id).disabled = !ready;
+  element('card').lang = sharing.lang;
   element('nearby').disabled = !ready;
   element('categories').disabled = !ready || !sharing.nearby;
   const hasExit = report?.calls.some(call => call.exitCode !== undefined);
   element('exitCodes').disabled = !hasExit || !sharing.categories || !sharing.nearby;
   element('focusOpt').hidden = !sharing.nearby || !(report?.errors > 1);
   element('feedback').textContent = '';
+  element('notice').textContent = noticeKey ? t(noticeKey) : '';
   element('exact').hidden = !ready;
   for (const id of ['claude','codex']) element(id).setAttribute('aria-pressed',String(source === id));
-  element('source').textContent = sharing.example ? 'Synthetic example' : 'Local session';
-  element('format').textContent = ready ? report.format : '';
+  element('source').textContent = ct(sharing.example ? 'example' : 'local');
+  element('format').textContent = '';
   element('demoInput').hidden = !sharing.example;
   element('sampleText').textContent = sharing.example ? exampleExcerpt(source) : '';
-  element('scope').textContent = !ready ? '' : !sharing.nearby
-    ? 'Only counts, agent format and parsing notes are shared.'
-    : hasExit ? 'Turning off exit codes also removes the related troubleshooting hint.'
-    : 'This session contains no recognized shell failure code.';
+  element('scope').textContent = ready ? t(!sharing.nearby ? 'summaryScope' : hasExit ? 'codeScope' : 'noCode') : '';
   element('rows').replaceChildren();
   element('timeline').hidden = true;
   element('stats').textContent = '';
   element('tip').textContent = '';
   element('legend').textContent = '';
-  if (!ready) {
-    element('headline').textContent = 'No receipt to export';
-    element('md').value = '';
-    return;
-  }
+  previewKind = 'md';
+  writePreview();
+  if (!ready) { element('headline').textContent = ct('noCard'); return; }
   const view = Bugcard.details(report,sharing);
-  const selected = view.target;
-  const title = selected ? ['Call #' + selected.n, view.showCategories ? selected.kind : '', view.outcome(selected)].filter(Boolean).join(' / ')
-    : sharing.nearby ? 'Last observed calls' : 'Session summary';
-  element('headline').textContent = title;
-  element('tip').textContent = view.hint || '';
-  const count = (n,noun) => n + ' ' + noun + (n === 1 ? '' : 's');
-  element('stats').textContent = count(report.count,'call') + ' · ' + count(report.errors,'reported error') + ' · ' + report.unpaired + ' unpaired';
+  element('format').textContent = view.format;
+  element('headline').textContent = view.target ? Bugcard.heading(view) : ct(sharing.nearby ? 'last' : 'summary');
+  element('tip').textContent = view.hint;
+  element('stats').textContent = BugcardLanguages.counts(sharing.lang,report);
   element('timeline').hidden = !view.rows.length;
+  element('callHead').textContent = ct('call');
+  element('categoryHead').textContent = ct('category');
   element('categoryHead').hidden = !view.showCategories;
+  element('outcomeHead').textContent = ct('outcome');
   for (const call of view.rows) {
     const row = element('rows').insertRow();
-    if (call === selected) row.className = 'focus';
+    if (call === view.target) row.className = 'focus';
     row.insertCell().textContent = '#' + call.n;
-    if (view.showCategories) row.insertCell().textContent = call.kind;
+    if (view.showCategories) row.insertCell().textContent = view.category(call);
     row.insertCell().textContent = view.outcome(call);
   }
-  element('legend').textContent = view.rows.some(call=>call.state==='Returned') ? 'Returned means a response was recorded.' : '';
-  if (report.invalid || report.unmatched) element('legend').textContent += ' Partial input. ' + Bugcard.notice(report);
-  element('md').value = Bugcard.markdown(report,sharing);
+  const notes = [];
+  if (view.rows.some(call=>call.state==='Returned')) notes.push(ct('legend'));
+  if (report.invalid || report.unmatched) notes.push(ct('partial') + ' · ' + Bugcard.notice(report,sharing.lang));
+  element('legend').textContent = notes.join(' ');
 }
 
-// Only the two bundled, invented examples can supply content to this panel.
+// This panel reads only the bundled fictional examples.
 function exampleExcerpt(id) {
   const entries = DEMOS[id].trim().split('\n').map(line=>JSON.parse(line));
+  let command, output;
   if (id === 'claude') {
-    const error = entries.flatMap(e=>e.message.content).find(b=>b.type==='tool_result' && b.is_error);
-    const call = entries.flatMap(e=>e.message.content).find(b=>b.type==='tool_use' && b.id===error.tool_use_id);
-    return 'Command: ' + call.input.command + '\nResult:\n' + error.content;
+    const blocks = entries.flatMap(entry=>entry.message.content);
+    const error = blocks.find(block=>block.type==='tool_result' && block.is_error);
+    command = blocks.find(block=>block.type==='tool_use' && block.id===error.tool_use_id).input.command;
+    output = error.content;
+  } else {
+    const calls = entries.map(entry=>entry.payload);
+    command = JSON.parse(calls.find(item=>item.type==='function_call').arguments).cmd;
+    output = calls.find(item=>item.type==='function_call_output').output;
   }
-  const call = entries.find(e=>e.payload.type==='function_call').payload;
-  const result = entries.find(e=>e.payload.type==='function_call_output').payload;
-  return 'Command: ' + JSON.parse(call.arguments).cmd + '\nResult:\n' + result.output;
+  return t('command') + ' · ' + command + '\n' + t('result') + '\n' + output;
 }
-
-function loadTrace(text, kind) {
+function loadTrace(text,kind) {
   report = Bugcard.parse(text);
   source = kind;
   element('exitCodes').checked = kind !== 'file';
   const focus = element('focus');
   focus.replaceChildren();
   for (const call of report.calls) {
-    if (call.state === 'Error') focus.add(new Option('Call #' + call.n, String(call.n)));
+    if (call.state === 'Error') focus.add(new Option(t('numbered',{n:call.n}),String(call.n)));
   }
-  element('notice').textContent = report.count
-    ? '' : 'No supported tool calls found. Choose a Claude Code or Codex CLI session JSONL.';
+  noticeKey = report.count ? '' : 'none';
   render();
 }
-
 function demo(kind) {
   revision++;
   element('file').value = '';
   loadTrace(DEMOS[kind],kind);
 }
-
+element('uiLang').onchange = () => {
+  uiLanguage = element('uiLang').value;
+  try { localStorage.setItem(preferenceKey,uiLanguage); } catch { /* Optional preference. */ }
+  if (/^https?:$/.test(location.protocol)) {
+    const address = new URL(location.href);
+    address.searchParams.set('lang',uiLanguage);
+    try { history.replaceState(null,'',address); } catch { /* The selected language still works. */ }
+  }
+  applyLanguage();
+  render();
+};
 for (const id of ['claude','codex']) element(id).onclick = () => demo(id);
-for (const id of ['nearby','categories','exitCodes','focus']) element(id).onchange = render;
+for (const id of ['nearby','categories','exitCodes','focus','cardLang']) element(id).onchange = render;
 element('file').onchange = async () => {
   const file = element('file').files[0];
   if (!file) return;
@@ -404,23 +576,19 @@ element('file').onchange = async () => {
   element('demoInput').open = false;
   source = 'file';
   report = null;
+  noticeKey = file.size > Bugcard.limit ? 'large' : 'loading';
   render();
-  if (file.size > Bugcard.limit) {
-    element('notice').textContent = 'Choose a single JSONL file up to 20 MiB.';
-    return;
-  }
-  element('notice').textContent = 'Reading the file locally…';
+  if (file.size > Bugcard.limit) return;
   try {
     const text = await file.text();
     if (request === revision) loadTrace(text,'file');
   } catch {
-    if (request === revision) element('notice').textContent = 'Could not read the selected file.';
+    if (request === revision) { noticeKey = 'unreadable'; render(); }
   }
 };
-
 function download(format) {
   if (!report?.count) return;
-  const body = format === 'svg' ? Bugcard.svg(report,options()) : element('md').value;
+  const body = (format === 'svg' ? Bugcard.svg : Bugcard.markdown)(report,options());
   const type = format === 'svg' ? 'image/svg+xml' : 'text/markdown';
   const url = URL.createObjectURL(new Blob([body+'\n'],{type}));
   const link = document.createElement('a');
@@ -429,24 +597,35 @@ function download(format) {
   link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-
-element('copy').onclick = async () => {
+async function copy(kind) {
   if (!report?.count) return;
+  const opts = options();
   const request = revision;
-  const body = element('md').value;
-  const stillCurrent = () => request === revision && body === element('md').value;
+  const body = (kind === 'md' ? Bugcard.markdown : Bugcard.plainText)(report,opts);
+  const stillCurrent = () => request === revision && JSON.stringify(opts) === JSON.stringify(options());
   try {
     await navigator.clipboard.writeText(body);
-    if (stillCurrent()) element('feedback').textContent = 'Copied. Paste into your issue and describe what you expected.';
+    if (stillCurrent()) element('feedback').textContent = t(kind === 'md' ? 'copiedMd' : 'copiedText');
   } catch {
     if (!stillCurrent()) return;
+    previewKind = kind;
+    writePreview();
     element('exact').open = true;
     element('md').focus();
     element('md').select();
-    element('feedback').textContent = 'Markdown selected. Press Ctrl+C or ⌘C to copy it.';
+    element('feedback').textContent = t('manual');
   }
-};
+}
+element('copy').onclick = () => copy('md');
+element('copyText').onclick = () => copy('text');
 element('saveSvg').onclick = () => download('svg');
 element('saveMd').onclick = () => download('md');
+// Download the static document itself, never a serialization of a user's loaded session.
+const offlineAddress = new URL(location.href);
+offlineAddress.hash = '';
+offlineAddress.search = '';
+if (offlineAddress.pathname.endsWith('/')) offlineAddress.pathname += 'index.html';
+element('offline').href = offlineAddress.href;
+applyLanguage();
 demo('claude');
 </script></body></html>

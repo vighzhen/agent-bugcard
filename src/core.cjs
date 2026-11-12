@@ -1,5 +1,7 @@
 'use strict';
 const Bugcard = (() => {
+  const languages = typeof module !== 'undefined' && module.exports
+    ? require('./locale.cjs') : BugcardLanguages;
   // Only this fixed vocabulary and derived counts may reach either renderer.
   const groups = new Map(Object.entries({
     Bash:'Shell',PowerShell:'Shell',exec_command:'Shell',write_stdin:'Shell',shell:'Shell',shell_command:'Shell',
@@ -139,14 +141,14 @@ const Bugcard = (() => {
       unpaired: rows.filter(call => call.state === 'Unpaired').length, calls: rows, invalid, unmatched
     };
   }
-  function notice(r){
-    const notes=[];if(r.invalid)notes.push(r.invalid+' malformed JSON line(s) skipped.');
-    if(r.unmatched)notes.push(r.unmatched+' result ID(s) without a matching call ignored.');
-    return notes.join(' ')||'Ready for review. Only recognized calls are counted.';
+  function coverage(report, lang = 'en') {
+    const notes = [];
+    if (report.invalid) notes.push(languages.text(lang, 'invalid', {n: report.invalid}));
+    if (report.unmatched) notes.push(languages.text(lang, 'unmatched', {n: report.unmatched}));
+    return notes.join(lang === 'en' ? '; ' : '，');
   }
-  const coverage=r=>[r.invalid?r.invalid+' malformed lines skipped':'',r.unmatched?r.unmatched+' unmatched result IDs':''].filter(Boolean).join('; ');
-  function label(number, singular) {
-    return number + ' ' + singular + (number === 1 ? '' : 's');
+  function notice(report, lang = 'en') {
+    return coverage(report, lang) || languages.text(lang, 'ready');
   }
 
   function details(report, options) {
@@ -159,45 +161,56 @@ const Bugcard = (() => {
       ? Math.max(0, Math.min(target.n - 3, report.count - 5))
       : Math.max(0, report.count - 5);
     const rows = showRows ? report.calls.slice(start, start + 5) : [];
+    const lang = languages.select([options.lang]);
+    const t = (key, data) => languages.text(lang, key, data);
     const outcome = call => shareCodes && call.exitCode !== undefined && call.state === 'Error'
-      ? 'Error (exit ' + call.exitCode + ')' : call.state;
-    const hints = {
-      126: 'On a POSIX shell, check whether the command can be executed.',
-      127: 'On a POSIX shell, check the command name and PATH.'
-    };
+      ? t('exit', {n:call.exitCode}) : t(call.state);
+    const hint = shareCodes && target && [126,127].includes(target.exitCode)
+      ? t('hint' + target.exitCode) : '';
     return {
-      target: showRows ? target : undefined, rows, showCategories, outcome,
-      hint: shareCodes && target ? hints[target.exitCode] : undefined
+      lang, t, target: showRows ? target : undefined, rows, showCategories, outcome, hint,
+      category: call => t(call.kind),
+      format: ['Unknown','Mixed formats'].includes(report.format) ? t(report.format) : report.format
     };
   }
 
-  function markdown(report, options = {}) {
+  function heading(view) {
+    if (!view.target) return '';
+    return [view.t('numbered', {n:view.target.n}), view.showCategories ? view.category(view.target) : '', view.outcome(view.target)]
+      .filter(Boolean).join(' · ');
+  }
+
+  function written(report, options, plain) {
     const view = details(report, options);
-    const lines = ['**Agent Bugcard · ' + report.format + '**', ''];
-    if (options.example) lines.push('_Synthetic example_', '');
-    lines.push(label(report.count, 'recognized tool call') + ' · ' +
-      label(report.errors, 'reported error') + ' · ' + label(report.unpaired, 'unpaired call') + '.');
+    const {lang, t} = view;
+    const bold = content => plain ? content : '**' + content + '**';
+    const colon = lang === 'en' ? ': ' : '：';
+    const lines = [bold('Agent Bugcard · ' + view.format), ''];
+    if (options.example) lines.push(plain ? t('example') : '_' + t('example') + '_', '');
+    lines.push(languages.counts(lang, report, true));
     if (view.target) {
-      const category = view.showCategories ? ' · ' + view.target.kind : '';
-      lines.push('', '**Call #' + view.target.n + category + ' · ' + view.outcome(view.target) + '**');
-      if (view.hint) lines.push('', 'Next check: ' + view.hint);
+      lines.push('', bold(heading(view)));
+      if (view.hint) lines.push('', t('next') + colon + view.hint);
     }
     if (view.rows.length) {
-      const column = view.showCategories ? ' Category |' : '';
-      const divider = view.showCategories ? ' --- |' : '';
-      lines.push('', '| Call |' + column + ' Outcome |', '| ---: |' + divider + ' --- |');
+      lines.push('');
+      const labels = [t('call'), ...(view.showCategories ? [t('category')] : []), t('outcome')];
+      if (!plain) {
+        lines.push('| ' + labels.join(' | ') + ' |', '| ---: | ' + labels.slice(1).map(()=>'---').join(' | ') + ' |');
+      }
       for (const call of view.rows) {
-        const category = view.showCategories ? ' ' + call.kind + ' |' : '';
-        lines.push('| ' + call.n + ' |' + category + ' ' + view.outcome(call) + ' |');
+        const cells = [plain ? '#' + call.n : String(call.n), ...(view.showCategories ? [view.category(call)] : []), view.outcome(call)];
+        lines.push(plain ? cells.join(' · ') : '| ' + cells.join(' | ') + ' |');
       }
     }
-    if (view.rows.some(call => call.state === 'Returned')) {
-      lines.push('', 'Returned means a response was recorded.');
-    }
-    if (coverage(report)) lines.push('', 'Partial input: ' + coverage(report) + '.');
-    lines.push('', 'Generated locally with [Agent Bugcard](https://github.com/vighzhen/agent-bugcard).');
+    if (view.rows.some(call=>call.state==='Returned')) lines.push('', t('legend'));
+    const warnings = coverage(report, lang);
+    if (warnings) lines.push('', t('partial') + colon + warnings);
+    if (!plain) lines.push('', t('generated') + ' [Agent Bugcard](https://github.com/vighzhen/agent-bugcard).');
     return lines.join('\n');
   }
+  function markdown(report, options = {}) { return written(report, options, false); }
+  function plainText(report, options = {}) { return written(report, options, true); }
 
   function svg(report, options = {}) {
     const view = details(report, options);
@@ -208,50 +221,50 @@ const Bugcard = (() => {
       '" font-size="' + size + '" font-weight="' + weight + '" fill="' + color + '">' + xml(value) + '</text>';
     const line = y => '<path d="M26 ' + y + 'H694" stroke="#4b6056"/>';
     const draw = [];
-    draw.push(text(26, 33, 'Agent Bugcard', 20, green, 700), text(543, 33, report.format, 15, muted, 600), line(49));
+    const {t,lang} = view;
+    draw.push(text(26, 33, 'Agent Bugcard', 20, green, 700), text(543, 33, view.format, 15, muted, 600), line(49));
     let y = 87;
     if (view.target) {
-      const kind = view.showCategories ? '  /  ' + view.target.kind : '';
-      draw.push(text(26, y, 'Call #' + view.target.n + kind + '  /  ' + view.outcome(view.target), 29, ink, 700));
+      const kind = view.showCategories ? '  /  ' + view.category(view.target) : '';
+      draw.push(text(26, y, t('numbered', {n:view.target.n}) + kind + '  /  ' + view.outcome(view.target), 29, ink, 700));
       y += 32;
       if (view.hint) {
         draw.push(text(26, y, view.hint, 18, green, 600));
         y += 33;
       }
     }
-    draw.push(text(26, y, label(report.count,'call') + '   ·   ' + label(report.errors,'reported error') +
-      '   ·   ' + report.unpaired + ' unpaired', 18, muted));
+    draw.push(text(26, y, languages.counts(lang, report), 18, muted));
     y += 19;
     if (view.rows.length) {
       draw.push(line(y));
       y += 24;
-      draw.push(text(32, y, 'CALL', 12, muted, 650, true),
-        text(138, y, view.showCategories ? 'CATEGORY' : '', 12, muted, 650, true),
-        text(449, y, 'OUTCOME', 12, muted, 650, true));
+      draw.push(text(32, y, t('call').toUpperCase(), 12, muted, 650, true),
+        text(138, y, view.showCategories ? t('category').toUpperCase() : '', 12, muted, 650, true),
+        text(449, y, t('outcome').toUpperCase(), 12, muted, 650, true));
       for (const call of view.rows) {
         y += 34;
         const selected = call === view.target;
         if (selected) draw.push('<rect x="18" y="' + (y - 23) + '" width="684" height="31" rx="5" fill="#4a4438"/>');
         draw.push(text(32,y,'#'+call.n,17,selected ? orange : muted,600,true),
-          text(138,y,view.showCategories ? call.kind : '',17,ink,600),
+          text(138,y,view.showCategories ? view.category(call) : '',17,ink,600),
           text(449,y,view.outcome(call),17,call.state === 'Error' ? orange : muted,600));
       }
       y += 18;
     }
     draw.push(line(y));
-    if (coverage(report)) {
+    if (coverage(report, lang)) {
       y += 23;
-      draw.push(text(26, y, 'Partial input: ' + coverage(report) + '.', 14, orange));
+      draw.push(text(26, y, t('partial') + ' · ' + coverage(report, lang), 14, orange));
     }
     y += 25;
-    const note = view.rows.some(call => call.state === 'Returned') ? 'Returned = response recorded.' : 'Generated locally.';
+    const note = view.rows.some(call => call.state === 'Returned') ? t('legend') : t('localNote');
     draw.push(text(26, y, note, 14, muted));
-    if(options.example) draw.push(text(535,y,'Synthetic example',14,muted,600));
+    if(options.example) draw.push(text(535,y,t('example'),14,muted,600));
     const height = y + 18;
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 ' + height + '" width="720" height="' +
-      height + '" role="img"><title>' + xml(report.format) + ' tool-call receipt</title><rect width="720" height="' +
+    return '<svg xmlns="http://www.w3.org/2000/svg" xml:lang="' + lang + '" viewBox="0 0 720 ' + height + '" width="720" height="' +
+      height + '" role="img"><title>' + xml(view.format) + ' ' + t('svgTitle') + '</title><rect width="720" height="' +
       height + '" rx="13" fill="#20372e"/>' + draw.join('') + '</svg>';
   }
-  return {parse,notice,details,markdown,svg,limit};
+  return {parse,notice,details,heading,markdown,plainText,svg,limit};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=Bugcard;
