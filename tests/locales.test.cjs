@@ -47,3 +47,34 @@ test('CLI localizes its reports and diagnostics', () => {
   const error = spawnSync(process.execPath,[cli,example,'--lang','zh-CN','--call','99'],{encoding:'utf8'});
   assert.equal(error.status,2);assert.match(error.stderr,/调用编号/);
 });
+
+test('CLI treats a flag-shaped filename literally after the option delimiter', () => {
+  const os = require('node:os');
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(),'bugcard-cli-'));
+  const cli = path.join(__dirname,'../bin/agent-bugcard.cjs');
+  try {
+    fs.copyFileSync(example,path.join(cwd,'--help'));
+    const result = spawnSync(process.execPath,[cli,'--lang','zh-Hant','--format','text','--exit-codes','--','--help'],{cwd,encoding:'utf8'});
+    assert.equal(result.status,0);
+    assert.match(result.stdout,/結束碼 127/);
+    assert.doesNotMatch(result.stdout,/--format/);
+    const ambiguous = spawnSync(process.execPath,[cli,example,'--','--help'],{cwd,encoding:'utf8'});
+    assert.equal(ambiguous.status,2);
+    assert.equal(ambiguous.stdout,'');
+  } finally {
+    fs.rmSync(cwd,{recursive:true,force:true});
+  }
+});
+
+test('CLI only accepts a positive decimal integer for a call position', () => {
+  const cli = path.join(__dirname,'../bin/agent-bugcard.cjs');
+  for (const value of ['0x3','3e0','3.0','3\n','+3','0','9007199254740992']) {
+    const result = spawnSync(process.execPath,[cli,example,'--call',value],{encoding:'utf8'});
+    assert.equal(result.status,2,JSON.stringify(value));
+    assert.equal(result.stdout,'');
+    assert.match(result.stderr,/call number/i);
+  }
+  const normal = spawnSync(process.execPath,[cli,'--call','3',example],{encoding:'utf8'});
+  assert.equal(normal.status,0);
+  assert.match(normal.stdout,/Call #3/);
+});
