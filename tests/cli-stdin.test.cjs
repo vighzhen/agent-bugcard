@@ -36,3 +36,43 @@ test('CLI stdin rejects conflicting sources and oversized or empty input', () =>
   assert.equal(empty.stdout,'');
   assert.doesNotMatch(empty.stderr,/--format/);
 });
+
+test('CLI applies the byte cap even if the file size observed before reading is stale', (t) => {
+  const {mkdtempSync, rmSync, writeFileSync} = fs;
+  const folder = mkdtempSync(join(require('node:os').tmpdir(),'bugcard-size-'));
+  t.after(() => rmSync(folder,{recursive:true,force:true}));
+  const synthetic = join(folder,'synthetic.jsonl');
+  const valid = fs.readFileSync(example);
+  writeFileSync(synthetic,Buffer.concat([valid,Buffer.alloc(limit+1-valid.length,32)]));
+  const cliSetup = `
+    const fs = require('node:fs');
+    const knownFile = {size: 1, isFile: () => true};
+    const stat = fs.statSync, fstat = fs.fstatSync;
+    const target = process.argv[3];
+    fs.statSync = (name,...rest) => name===target ? knownFile : stat(name,...rest);
+    fs.fstatSync = (fd,...rest) => {
+      const observed = fstat(fd,...rest);
+      return observed.size===${limit+1} ? knownFile : observed;
+    };
+    const cli = process.argv[2];
+    process.argv = [process.execPath,cli,process.argv[3]];
+    require(cli);
+  `;
+  const out = spawnSync(process.execPath,['-e',cliSetup,'--','fixture',cli,synthetic],{encoding:'utf8'});
+  assert.equal(out.status,2,out.stderr);
+  assert.equal(out.stdout,'');
+  assert.match(out.stderr,/20 MiB/);
+});
+
+test('CLI file accepts exactly 20 MiB with an unchanged receipt', (t) => {
+  const folder = fs.mkdtempSync(join(require('node:os').tmpdir(),'bugcard-size-'));
+  t.after(() => fs.rmSync(folder,{recursive:true,force:true}));
+  const synthetic = join(folder,'synthetic.jsonl');
+  const valid = fs.readFileSync(example);
+  fs.writeFileSync(synthetic,Buffer.concat([valid,Buffer.alloc(limit-valid.length,32)]));
+  const out = run([synthetic]);
+  const original = run([example]);
+  assert.equal(out.status,0,out.stderr);
+  assert.equal(out.stdout,original.stdout);
+  assert.equal(out.stderr,original.stderr);
+});

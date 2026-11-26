@@ -62,15 +62,35 @@ async function readStdin() {
   return Buffer.concat(chunks,size).toString('utf8');
 }
 
+function readFileBounded(path) {
+  const fd=fs.openSync(path,fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
+  try {
+    const stat=fs.fstatSync(fd);
+    if (!stat.isFile() || stat.size>core.limit) return null;
+    const chunks=[];
+    let size=0;
+    // The opened file can grow after fstat; bound the bytes actually read.
+    for (;;) {
+      const chunk=Buffer.allocUnsafe(Math.min(64*1024,core.limit+1-size));
+      const count=fs.readSync(fd,chunk,0,chunk.length,null);
+      if (!count) return Buffer.concat(chunks,size).toString('utf8');
+      size+=count;
+      if (size>core.limit) return null;
+      chunks.push(chunk.subarray(0,count));
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 if (stdin) {
   if (process.stdin.isTTY) fail(usage);
   readStdin().then(renderReceipt,()=>fail(t('cliRead')));
 } else {
   let raw;
   try {
-    const stat=fs.statSync(file);
-    if (!stat.isFile() || stat.size>core.limit) fail(t('cliSize'));
-    raw=fs.readFileSync(file,'utf8');
+    raw=readFileBounded(file);
   } catch { fail(t('cliRead')); }
+  if (raw===null) fail(t('cliSize'));
   renderReceipt(raw);
 }
