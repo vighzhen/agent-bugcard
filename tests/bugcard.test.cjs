@@ -90,6 +90,20 @@ test('a modern completed command and its model-level mirror count once and prefe
   const standalone = parse(lines({type:'event_msg',payload:{type:'item_completed',item:{...tool,exit_code:16777215}}}));
   assert.equal(standalone.errors,1);assert.equal(standalone.calls[0].exitCode,undefined);
 });
+
+test('a command item without recognized terminal evidence is not counted as returned', () => {
+  const item = (id, status, exit_code) => ({type:'event_msg',payload:{type:'item_completed',
+    item:{id,type:'CommandExecution',status,exit_code}}});
+  const report = parse(lines(
+    item('known-failure','failed'), item('known-failure','future-private-status'),
+    item('missing-status'), item('running','inProgress'),
+    item('complete','completed'), item('explicit-exit','future-private-status',7)
+  ));
+  assert.deepEqual(report.calls.map(x=>x.state),['Error','Unpaired','Unpaired','Returned','Error']);
+  assert.equal(report.unpaired,2);
+  assert.equal(report.calls[4].exitCode,7);
+  assert.ok(!markdown(report).includes('future-private-status'));
+});
 test('selected error controls the context window and check in both renderers', () => {
   const steps=[];
   for(let n=1;n<=10;n++){

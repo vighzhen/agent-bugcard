@@ -272,10 +272,12 @@ const Bugcard = (() => {
         if (['item_started', 'item_completed'].includes(payload.type) && item?.type === 'CommandExecution' && present(item.id)) {
           add('Codex CLI', item.id, 'exec_command');
           if (payload.type === 'item_completed') {
-            completions.set(key('Codex CLI', item.id), {
-              code: Number.isSafeInteger(item.exit_code) ? item.exit_code : null,
-              state: ['failed','declined'].includes(item.status) ? 'Error' : 'Returned'
-            });
+            const code = Number.isSafeInteger(item.exit_code) ? item.exit_code : null;
+            const failed = ['failed','declined'].includes(item.status);
+            // The record name alone is not terminal evidence and must not erase a known result.
+            if (code !== null || failed || item.status === 'completed') {
+              completions.set(key('Codex CLI', item.id), {code, state: failed ? 'Error' : 'Returned'});
+            }
           }
         }
       }
