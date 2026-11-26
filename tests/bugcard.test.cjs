@@ -116,3 +116,21 @@ test('legacy Codex shell envelopes retain explicit failures and exclude stdout',
     ['shell', JSON.stringify({output:body,metadata:{exit_code:126}})]
   ]) assert.equal(wrap(name,output).calls[0].exitCode,undefined);
 });
+
+test('a running Codex shell envelope does not claim a terminal result', () => {
+  const running = 'Chunk ID: abc\nWall time: 1.0 seconds\nProcess running with session ID 38163\nOutput:\nprivate stdout';
+  const call = name => rsp('function_call','pending',{name});
+  const output = text => rsp('function_call_output','pending',{output:text});
+  assert.equal(parse(lines(call('exec_command'),output(running))).unpaired,1);
+  assert.equal(parse(lines(call('write_stdin'),output(running))).unpaired,1);
+  const done = {type:'event_msg',payload:{type:'exec_command_end',call_id:'pending',exit_code:9}};
+  const report = parse(lines(done,call('exec_command'),output(running),output(running)));
+  assert.deepEqual(report.calls,[{n:1,kind:'Shell',state:'Error',exitCode:9}]);
+  for (const render of [svg,markdown]) {
+    const exported = render(report,{exitCodes:true});
+    assert.ok(!exported.includes('38163') && !exported.includes('private stdout'));
+  }
+  assert.equal(parse(lines(call('Read'),output(running))).calls[0].state,'Returned');
+  assert.equal(parse(lines(call('exec_command'),output('Output:\n'+running))).calls[0].state,'Returned');
+  assert.equal(parse(lines(call('exec_command'), output(running),output(running.replace('running with session ID 38163','exited with code 0')))).calls[0].state,'Returned');
+});
