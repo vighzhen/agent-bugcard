@@ -48,6 +48,33 @@ test('CLI localizes its reports and diagnostics', () => {
   assert.equal(error.status,2);assert.match(error.stderr,/调用编号/);
 });
 
+test('CLI preserves the first paired failure with a UTF-8 BOM', () => {
+  const os = require('node:os');
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(),'bugcard-bom-'));
+  const cli = path.join(__dirname,'../bin/agent-bugcard.cjs');
+  const input = [
+    {type:'assistant',message:{content:[{type:'tool_use',id:'private-fixture-id',name:'Bash'}]}},
+    {type:'user',message:{content:[{type:'tool_result',tool_use_id:'private-fixture-id',is_error:true,
+      content:'Exit code 7\nsilent fixture output'}]}}
+  ].map(row=>JSON.stringify(row)).join('\r\n');
+  try {
+    const run = (name, text) => {
+      fs.writeFileSync(path.join(cwd,name),text,'utf8');
+      return spawnSync(process.execPath,[cli,'--format','text','--exit-codes',name],{cwd,encoding:'utf8'});
+    };
+    const plain=run('plain.jsonl',input);
+    const marked=run('marked.jsonl','\uFEFF'+input);
+    assert.equal(plain.status,0);
+    assert.equal(marked.status,0);
+    assert.equal(marked.stderr,'');
+    assert.equal(marked.stdout,plain.stdout);
+    assert.match(marked.stdout,/exit 7/);
+    assert.doesNotMatch(marked.stdout,/private-fixture-id|silent fixture output/);
+  } finally {
+    fs.rmSync(cwd,{recursive:true,force:true});
+  }
+});
+
 test('CLI treats a flag-shaped filename literally after the option delimiter', () => {
   const os = require('node:os');
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(),'bugcard-cli-'));

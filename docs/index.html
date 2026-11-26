@@ -240,7 +240,9 @@ const Bugcard = (() => {
         legacyCode: previous?.legacyCode ? previous.legacyCode : legacyCode ?? previous?.legacyCode
       });
     }
-    for (const line of text.split(/\r?\n/)) {
+    // Tolerate one UTF-8 BOM at the file boundary without masking malformed later records.
+    const jsonl = text.startsWith('\uFEFF') ? text.slice(1) : text;
+    for (const line of jsonl.split(/\r?\n/)) {
       if (!line.trim()) continue;
       let event;
       try { event = JSON.parse(line); }
