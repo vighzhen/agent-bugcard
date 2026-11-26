@@ -35,6 +35,15 @@ test('truncation and unpaired/orphaned records are distinguished',()=>{
   const r=parse(lines(cla('x','Read',{}),res('missing',true,''))+'\n{"type":');assert.equal(r.unpaired,1);assert.equal(r.unmatched,1);assert.equal(r.invalid,1);
   for(const render of [svg,markdown])assert.match(render(r),/Partial input/);
 });
+test('only one UTF-8 marker at the very start is ignored by the shared parser',()=>{
+  const a=cla('first','Read',{}), b=cla('second','Read',{});
+  const trace=lines(a,b);
+  assert.deepEqual(parse('\uFEFF'+trace),parse(trace));
+  assert.equal(parse('\uFEFF\uFEFF'+trace).invalid,1);
+  const middle=parse(JSON.stringify(a)+'\n\uFEFF'+JSON.stringify(b));
+  assert.equal(middle.invalid,1);
+  assert.equal(middle.count,1);
+});
 test('both renderers respect export preferences and bound the window to five',()=>{
   const events=[];for(let i=1;i<=12;i++)events.push(cla(String(i),'Bash',{}),res(String(i),i===8,''));
   const r=parse(lines(...events));
