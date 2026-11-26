@@ -17,12 +17,15 @@ const Bugcard = (() => {
     return null;
   }
 
-  function codexExit(output) {
+  function codexShellHeader(output) {
     const blocks = Array.isArray(output) ? output : [{type: 'text', text: output}];
     for (const block of blocks) {
       if (!['text', 'input_text', 'output_text'].includes(block?.type) || typeof block.text !== 'string') continue;
       const match = /^Chunk ID: [^\r\n]{1,128}\r?\nWall time: [\d.]+ seconds\r?\nProcess exited with code (-?\d{1,10})(?=\r?\n|$)/.exec(block.text.slice(0, 512));
-      if (match) return Number(match[1]);
+      if (match) return {code: Number(match[1])};
+      if (/^Chunk ID: [^\r\n]{1,128}\r?\nWall time: [\d.]+ seconds\r?\nProcess running with session ID \d{1,20}(?=\r?\n|$)/.test(block.text.slice(0, 512))) {
+        return {pending: true};
+      }
     }
     return null;
   }
@@ -63,12 +66,13 @@ const Bugcard = (() => {
       const callKey = key(format, id);
       if (!calls.has(callKey)) calls.set(callKey, {format, name});
     }
-    function end(format, id, state, code, legacyCode = null) {
+    function end(format, id, state, code, legacyCode = null, pending = false) {
       if (!present(id)) return;
       const callKey = key(format, id);
       const previous = results.get(callKey);
       results.set(callKey, {
         state: previous?.state === 'Error' ? 'Error' : state,
+        pending: pending || previous?.pending === true,
         code: previous?.code ? previous.code : code ?? previous?.code,
         legacyCode: previous?.legacyCode ? previous.legacyCode : legacyCode ?? previous?.legacyCode
       });
@@ -94,7 +98,8 @@ const Bugcard = (() => {
       } else if (event.type === 'response_item' && payload) {
         if (['function_call', 'custom_tool_call'].includes(payload.type)) add('Codex CLI', payload.call_id, payload.name);
         if (['function_call_output', 'custom_tool_call_output'].includes(payload.type)) {
-          end('Codex CLI', payload.call_id, 'Returned', codexExit(payload.output), legacyShellExit(payload.output));
+          const header = codexShellHeader(payload.output);
+          end('Codex CLI', payload.call_id, 'Returned', header?.code, legacyShellExit(payload.output), header?.pending);
         }
       } else if (event.type === 'event_msg' && payload) {
         if (payload.type === 'exec_command_end' && present(payload.call_id) && Number.isSafeInteger(payload.exit_code)) {
@@ -124,7 +129,8 @@ const Bugcard = (() => {
       const acceptsExit = call.format === 'Codex CLI' ? group === 'Shell' : call.name === 'Bash';
       const legacyCode = call.name === 'shell' || call.name === 'shell_command' ? result?.legacyCode : null;
       const code = acceptsExit ? completion?.code ?? result?.code ?? legacyCode : null;
-      let state = completion?.state ?? result?.state ?? 'Unpaired';
+      const awaitingExit = group === 'Shell' && call.format === 'Codex CLI' && result?.pending;
+      let state = completion?.state ?? (awaitingExit ? 'Unpaired' : result?.state ?? 'Unpaired');
       if (Number.isInteger(code)) state = code === 0 ? 'Returned' : 'Error';
       const row = {n: rows.length + 1, kind: group, state};
       // Preserve failures outside 1..255 as errors, but never export that number.
