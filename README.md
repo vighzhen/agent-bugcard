@@ -29,6 +29,8 @@ node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --call 3 --exit-codes
 node bin/agent-bugcard.cjs path/to/session.jsonl --summary-only > receipt.md
 ```
 
+To pipe a local producer into Bugcard without creating an intermediate JSONL file, use `--stdin` instead of a filename (not both). The same 20 MiB limit applies; input is processed locally.
+
 `--call N` selects the numbered error call shown in the card. `--hide-categories` and `--summary-only` also suppress numeric exit codes and their troubleshooting hints.
 
 ## What the card discloses

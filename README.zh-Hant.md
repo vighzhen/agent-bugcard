@@ -42,4 +42,6 @@ node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hant --exit
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hant --call 3 --exit-codes --format svg > receipt.svg
 ```
 
+也可以透過管線將本機程式的輸出傳給 `--stdin`，不用建立中間 JSONL 檔案。此參數與檔名二選一，輸入仍在本機處理，上限同為 20 MiB。
+
 **已傳回**表示有工具回應，執行結果仍需確認。**未配對**表示找不到對應的完成記錄。回報解析問題時，請附自行編寫的最小範例。[回報問題](https://github.com/vighzhen/agent-bugcard/issues)
