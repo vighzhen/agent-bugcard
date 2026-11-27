@@ -31,7 +31,7 @@ node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --call 3 --exit-codes
 node bin/agent-bugcard.cjs path/to/session.jsonl --summary-only > receipt.md
 ```
 
-Use `--stdin` instead of a filename (not both) to read piped input locally, up to 20 MiB. This option is on current `main`, not in the v0.3.0 tag. Try it with the bundled synthetic session:
+Use `--stdin` instead of a filename (not both) to read piped input locally, up to 20 MiB. This option is on current `main`, not in the v0.3.0 tag. Try the bundled synthetic session in Bash or another POSIX shell. In Windows PowerShell, use the filename form above rather than piping with `cat`. The CLI expects UTF-8 input, with or without a BOM:
 
 ```sh
 cat examples/claude.synthetic.jsonl | node bin/agent-bugcard.cjs --stdin --exit-codes

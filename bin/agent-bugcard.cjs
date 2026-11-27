@@ -2,6 +2,7 @@
 'use strict';
 
 const fs = require('node:fs');
+const {TextDecoder} = require('node:util');
 const core = require('../src/core.cjs');
 const languages = require('../src/locale.cjs');
 const argv = process.argv.slice(2);
@@ -14,9 +15,9 @@ function fail(message) { console.error(message); process.exit(2); }
 if (!lang) fail('--lang: en | zh-Hans | zh-Hant');
 const t = key => languages.text(lang,key);
 const inputError = {
-  en: {kind:'Choose a regular JSONL file, not a directory or other special file.', size:'Input exceeds 20 MiB.'},
-  'zh-Hans': {kind:'请选择普通 JSONL 文件，而不是目录或其他特殊文件。', size:'输入超过 20 MiB。'},
-  'zh-Hant': {kind:'請選擇一般 JSONL 檔案，而非資料夾或其他特殊檔案。', size:'輸入超過 20 MiB。'}
+  en: {kind:'Choose a regular JSONL file, not a directory or other special file.', size:'Input exceeds 20 MiB.', encoding:'Input is not valid UTF-8. Save the JSONL file as UTF-8 and try again.'},
+  'zh-Hans': {kind:'请选择普通 JSONL 文件，而不是目录或其他特殊文件。', size:'输入超过 20 MiB。', encoding:'输入不是有效的 UTF-8。请将 JSONL 文件保存为 UTF-8 后重试。'},
+  'zh-Hant': {kind:'請選擇一般 JSONL 檔案，而非資料夾或其他特殊檔案。', size:'輸入超過 20 MiB。', encoding:'輸入不是有效的 UTF-8。請將 JSONL 檔案儲存為 UTF-8 後重試。'}
 }[lang];
 const NOT_REGULAR = Symbol('not a regular file');
 const usage = t('cliUsage') + ': node bin/agent-bugcard.cjs [--lang en|zh-Hans|zh-Hant] [--format md|svg|text] [--summary-only] [--hide-categories] [--exit-codes] [--call NUMBER] ([--] FILE | --stdin)';
@@ -48,7 +49,12 @@ if (delimiter !== -1) {
 }
 if (stdin === Boolean(file)) fail(usage);
 
-function renderReceipt(raw) {
+function renderReceipt(bytes) {
+  let raw;
+  try {
+    // 保留开头的 BOM，由共用解析器处理；不以替换字符掩盖损坏的编码。
+    raw=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+  } catch { fail(inputError.encoding); }
   const receipt=core.parse(raw);
   if (!receipt.count) fail(t('cliNone'));
   if (call && !receipt.calls.some(row=>row.n===call && row.state==='Error')) fail(t('cliCall'));
@@ -65,7 +71,7 @@ async function readStdin() {
     if (size>core.limit) fail(inputError.size);
     chunks.push(chunk);
   }
-  return Buffer.concat(chunks,size).toString('utf8');
+  return Buffer.concat(chunks,size);
 }
 
 function readFileBounded(path) {
@@ -82,7 +88,7 @@ function readFileBounded(path) {
     for (;;) {
       const chunk=Buffer.allocUnsafe(Math.min(64*1024,core.limit+1-size));
       const count=fs.readSync(fd,chunk,0,chunk.length,null);
-      if (!count) return Buffer.concat(chunks,size).toString('utf8');
+      if (!count) return Buffer.concat(chunks,size);
       size+=count;
       if (size>core.limit) return null;
       chunks.push(chunk.subarray(0,count));
