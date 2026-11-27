@@ -4,11 +4,13 @@
 
 Turn a **Claude Code or Codex CLI failure into a GitHub issue attachment**. The tool reads one session file on your machine and shows which tool call failed. You choose whether to include nearby calls, tool categories and shell exit codes. Your prompts, commands, paths and raw output stay private.
 
-[**Try the demo with a sample session**](https://vighzhen.github.io/agent-bugcard/) · [Download the offline HTML](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html) · [Offline ZIP](https://vighzhen.github.io/agent-bugcard/agent-bugcard-offline.zip)
+[**Try the demo with a sample session**](https://vighzhen.github.io/agent-bugcard/) · [Download the latest release HTML](https://github.com/vighzhen/agent-bugcard/releases/latest/download/agent-bugcard.html) · [Demo offline ZIP](https://vighzhen.github.io/agent-bugcard/agent-bugcard-offline.zip)
 
 ![Synthetic Claude Code example. Call 3, Shell, returned exit 127. The suggested next check is the command name and PATH.](docs/sample.svg)
 
 **What can a maintainer do with this?** In the sample above, the reporter chose to share exit 127. A maintainer can ask whether the executable is on the agent's PATH. Switch to the Codex example for exit 126 and the next question becomes whether the command can be executed. Programs can also return these codes themselves. The card records a starting point for triage. [Bash exit status reference](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html)
+
+The demo and its ZIP are for browser use. For a versioned browser copy, use the [GitHub release assets](https://github.com/vighzhen/agent-bugcard/releases/latest). If the demo is unreachable, the [v0.3.0 CDN fallback](https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html) is the HTML from that tag; save it as `agent-bugcard.html` and open it locally. It does not track the live demo.
 
 ## Attach a receipt to an issue
 
@@ -20,7 +22,7 @@ Turn a **Claude Code or Codex CLI failure into a GitHub issue attachment**. The 
 
 ## CLI
 
-Node.js 18+ is sufficient. From a clone of this repository:
+Node.js 18+ is sufficient. Run the CLI from a clone of the current `main` branch. The browser HTML and ZIP downloads do not include the CLI.
 
 ```sh
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --exit-codes
@@ -29,7 +31,11 @@ node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --call 3 --exit-codes
 node bin/agent-bugcard.cjs path/to/session.jsonl --summary-only > receipt.md
 ```
 
-To pipe a local producer into Bugcard without creating an intermediate JSONL file, use `--stdin` instead of a filename (not both). The same 20 MiB limit applies; input is processed locally.
+Use `--stdin` instead of a filename (not both) to read piped input locally, up to 20 MiB. This option is on current `main`, not in the v0.3.0 tag. Try it with the bundled synthetic session:
+
+```sh
+cat examples/claude.synthetic.jsonl | node bin/agent-bugcard.cjs --stdin --exit-codes
+```
 
 `--call N` selects the numbered error call shown in the card. `--hide-categories` and `--summary-only` also suppress numeric exit codes and their troubleshooting hints.
 
