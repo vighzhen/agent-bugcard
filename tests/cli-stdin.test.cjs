@@ -137,3 +137,18 @@ test('CLI accepts a UTF-8 BOM and retains JSONL partial-parse warnings', (t) => 
     assert.doesNotMatch(result.stdout,/虚构样例/);
   }
 });
+
+test('CLI file accepts a path containing spaces and non-ASCII characters', (t) => {
+  const folder = fs.mkdtempSync(join(require('node:os').tmpdir(),'bugcard-path-'));
+  t.after(() => fs.rmSync(folder,{recursive:true,force:true}));
+  const path = join(folder,'本地 测试 日志.jsonl');
+  const fixture = fs.readFileSync(example);
+  fs.writeFileSync(path,fixture);
+  const file = run([path,'--lang','zh-Hans']);
+  const input = run(['--stdin','--lang','zh-Hans'],fixture);
+  assert.equal(file.status,0,file.stderr);
+  assert.equal(input.status,0,input.stderr);
+  assert.equal(file.stdout,input.stdout);
+  assert.equal(file.stderr,input.stderr);
+  assert.doesNotMatch(file.stdout,/本地 测试 日志/);
+});
