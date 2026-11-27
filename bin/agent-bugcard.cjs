@@ -23,16 +23,17 @@ const NOT_REGULAR = Symbol('not a regular file');
 const usage = t('cliUsage') + ': node bin/agent-bugcard.cjs [--lang en|zh-Hans|zh-Hant] [--format md|svg|text] [--summary-only] [--hide-categories] [--exit-codes] [--call NUMBER] ([--] FILE | --stdin)';
 if (args.includes('--help') || args.includes('-h')) { console.log(usage); process.exit(0); }
 
-let file, format='md', nearby=true, categories=true, exitCodes=false, call, stdin=false;
+let file, format, nearby=true, categories=true, exitCodes=false, call, stdin=false;
 for (let i=0; i<args.length; i++) {
   switch (args[i]) {
     case '--lang': if (i !== localeIndex) fail(usage); i++; break;
-    case '--format': format=args[++i]; if (!['md','svg','text'].includes(format)) fail(usage); break;
+    case '--format': if (format !== undefined) fail(usage); format=args[++i]; if (!['md','svg','text'].includes(format)) fail(usage); break;
     case '--stdin': if (stdin) fail(usage); stdin=true; break;
     case '--summary-only': nearby=false; break;
     case '--hide-categories': categories=false; break;
     case '--exit-codes': exitCodes=true; break;
     case '--call': {
+      if (call !== undefined) fail(usage);
       const value = args[++i];
       call=Number(value);
       if (!value || /[^0-9]/.test(value) || !Number.isSafeInteger(call) || call<1) fail(t('cliNumber'));
@@ -59,7 +60,7 @@ function renderReceipt(bytes) {
   if (!receipt.count) fail(t('cliNone'));
   if (call && !receipt.calls.some(row=>row.n===call && row.state==='Error')) fail(t('cliCall'));
   if (receipt.invalid || receipt.unmatched) console.error(core.notice(receipt,lang));
-  const render={md:core.markdown,svg:core.svg,text:core.plainText}[format];
+  const render={md:core.markdown,svg:core.svg,text:core.plainText}[format ?? 'md'];
   process.stdout.write(render(receipt,{lang,nearby,categories,exitCodes,call})+'\n');
 }
 

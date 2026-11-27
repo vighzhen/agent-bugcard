@@ -48,4 +48,6 @@ node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hant --call
 cat examples/claude.synthetic.jsonl | node bin/agent-bugcard.cjs --stdin --lang zh-Hant --exit-codes --format text
 ```
 
+`--call`、`--format` 和 `--lang` 各最多提供一次，重複會報錯，不會覆蓋前面的值。
+
 **已傳回**表示有工具回應，執行結果仍需確認。**未配對**表示找不到對應的完成記錄。回報解析問題時，請附自行編寫的最小範例。[回報問題](https://github.com/vighzhen/agent-bugcard/issues)
