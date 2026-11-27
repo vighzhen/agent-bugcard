@@ -96,3 +96,44 @@ test('CLI distinguishes a directory from oversized input in each language', (t) 
   assert.equal(missing.stdout,'');
   assert.equal(missing.stderr.trim(),'Could not read the selected file.');
 });
+
+test('CLI reports invalid UTF-8 without a partial receipt or original bytes', (t) => {
+  const folder = fs.mkdtempSync(join(require('node:os').tmpdir(),'bugcard-encoding-'));
+  t.after(() => fs.rmSync(folder,{recursive:true,force:true}));
+  const path = join(folder,'input.jsonl');
+  const fixture = fs.readFileSync(example);
+  const invalid = [
+    Buffer.concat([Buffer.from([0xff,0xfe]),Buffer.from(fixture.toString('utf8'),'utf16le')]),
+    Buffer.concat([fixture,Buffer.from('\nTEST_ONLY_RAW_123'),Buffer.from([0xe4,0xb8])])
+  ];
+  for (const bytes of invalid) {
+    fs.writeFileSync(path,bytes);
+    for (const [lang,message] of [
+      ['en','Input is not valid UTF-8. Save the JSONL file as UTF-8 and try again.'],
+      ['zh-Hans','输入不是有效的 UTF-8。请将 JSONL 文件保存为 UTF-8 后重试。'],
+      ['zh-Hant','輸入不是有效的 UTF-8。請將 JSONL 檔案儲存為 UTF-8 後重試。']
+    ]) {
+      for (const result of [run(['--lang',lang,path]),run(['--lang',lang,'--stdin'],bytes)]) {
+        assert.equal(result.status,2,result.stderr);
+        assert.equal(result.stdout,'');
+        assert.equal(result.stderr.trim(),message);
+      }
+    }
+  }
+});
+
+test('CLI accepts a UTF-8 BOM and retains JSONL partial-parse warnings', (t) => {
+  const folder = fs.mkdtempSync(join(require('node:os').tmpdir(),'bugcard-encoding-'));
+  t.after(() => fs.rmSync(folder,{recursive:true,force:true}));
+  const path = join(folder,'input.jsonl');
+  const fixture = fs.readFileSync(example);
+  const bytes = Buffer.concat([Buffer.from([0xef,0xbb,0xbf]),fixture,Buffer.from('\n{虚构样例\n')]);
+  fs.writeFileSync(path,bytes);
+  for (const [args,input] of [[[path],undefined],[['--stdin'],bytes]]) {
+    const result = run(args,input);
+    assert.equal(result.status,0,result.stderr);
+    assert.match(result.stderr,/1 malformed lines skipped/);
+    assert.match(result.stdout,/Partial input/);
+    assert.doesNotMatch(result.stdout,/虚构样例/);
+  }
+});

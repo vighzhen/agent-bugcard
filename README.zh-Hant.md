@@ -42,7 +42,7 @@ node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hant --exit
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hant --call 3 --exit-codes --format svg > receipt.svg
 ```
 
-也可透過管線把本機程式的輸出傳給 `--stdin`，不必建立中間 JSONL 檔案。此參數與檔名二選一，輸入仍在本機處理，上限同為 20 MiB。此選項已在目前的 `main` 提供，`v0.3.0` 標籤不支援。使用內附虛構範例試跑：
+也可透過管線把本機程式的輸出傳給 `--stdin`，不必建立中間 JSONL 檔案。此參數與檔名二選一，輸入仍在本機處理，上限同為 20 MiB。此選項已在目前的 `main` 提供，`v0.3.0` 標籤不支援。下方的虛構範例在 Bash 或其他 POSIX shell 中執行。Windows PowerShell 請使用上方的檔名方式，不要使用 `cat` 管線。CLI 輸入須為 UTF-8，可含 BOM：
 
 ```sh
 cat examples/claude.synthetic.jsonl | node bin/agent-bugcard.cjs --stdin --lang zh-Hant --exit-codes --format text

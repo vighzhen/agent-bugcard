@@ -42,7 +42,7 @@ node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hans --exit
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hans --call 3 --exit-codes --format svg > receipt.svg
 ```
 
-也可以把本地程序的输出通过管道传给 `--stdin`，不用生成中间 JSONL 文件。此参数与文件名二选一，输入仍在本机处理，上限同为 20 MiB。此选项已在当前 `main` 提供，`v0.3.0` 标签不支持。用内置虚构样例试跑：
+也可以把本地程序的输出通过管道传给 `--stdin`，不用生成中间 JSONL 文件。此参数与文件名二选一，输入仍在本机处理，上限同为 20 MiB。此选项已在当前 `main` 提供，`v0.3.0` 标签不支持。下面的虚构样例在 Bash 或其他 POSIX shell 中运行。Windows PowerShell 请用上面的文件名方式，不要用 `cat` 管道。CLI 输入须为 UTF-8，可带 BOM：
 
 ```sh
 cat examples/claude.synthetic.jsonl | node bin/agent-bugcard.cjs --stdin --lang zh-Hans --exit-codes --format text
