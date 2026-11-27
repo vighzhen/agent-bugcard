@@ -12,5 +12,7 @@ jobs:
           node-version: 22
       - run: npm test
       - run: npm run build && git diff --exit-code -- docs
-      - name: Verify the offline ZIP contains this build
-        run: python3 -c "from pathlib import Path; from zipfile import ZipFile; assert ZipFile('docs/agent-bugcard-offline.zip').read('agent-bugcard.html') == Path('docs/index.html').read_bytes()"
+      - name: 校验离线包完整内容
+        run: |
+          python3 -m unittest discover -s tests -p 'test_pack_offline.py'
+          python3 scripts/pack-offline.py --check docs/agent-bugcard-offline.zip
