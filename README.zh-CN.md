@@ -1,6 +1,6 @@
 # Agent Bugcard · 工具报错诊断卡
 
-[**打开简体中文演示**](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hans) · [备用单文件下载](https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html) · [离线压缩包](https://vighzhen.github.io/agent-bugcard/agent-bugcard-offline.zip) · [繁體中文](README.zh-Hant.md) · [English](README.md)
+[**打开简体中文演示**](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hans) · [备用 HTML（v0.3.0）](https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html) · [演示离线包](https://vighzhen.github.io/agent-bugcard/agent-bugcard-offline.zip) · [繁體中文](README.zh-Hant.md) · [English](README.md)
 
 Claude Code 或 Codex CLI 报错时，把失败的那一步发给同事。工具在你的电脑上读取会话，把调用顺序、工具类别和你选中的退出码整理成一张卡。命令、文件路径和原始对话留在本机。
 
@@ -18,7 +18,7 @@ Claude Code 或 Codex CLI 报错时，把失败的那一步发给同事。工具
 
 ## 从备用地址获取离线文件
 
-优先使用上面的正式演示或站内离线包。如果你的线路无法打开它们，可以从备用 CDN 获取同一份 HTML。浏览器可能显示源代码；用“另存为”保存为 `agent-bugcard.html`（文件类型选“所有文件”），再双击打开。Windows 也可以在 PowerShell 中运行：
+在线试用和演示离线包都是浏览器版。需要按版本下载时，打开 [GitHub Releases](https://github.com/vighzhen/agent-bugcard/releases/latest)。如果演示打不开，可用备用 CDN 下载固定为 `v0.3.0` 的 HTML；它不跟随在线演示更新。浏览器可能显示源代码；用“另存为”保存为 `agent-bugcard.html`（文件类型选“所有文件”），再双击打开。Windows 也可以在 PowerShell 中运行：
 
 ```powershell
 curl.exe -fL "https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html" -o agent-bugcard.html
@@ -35,13 +35,17 @@ curl.exe -fL "https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/ind
 
 ## 命令行
 
-需要 Node.js 18+。在克隆下来的项目目录运行：
+需要 Node.js 18+。克隆仓库的当前 `main` 分支后运行；上面的 HTML 和离线包不含命令行工具。
 
 ```sh
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hans --exit-codes --format text
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hans --call 3 --exit-codes --format svg > receipt.svg
 ```
 
-也可以把本地程序的输出通过管道传给 `--stdin`，不用生成中间 JSONL 文件。此参数与文件名二选一，输入仍在本机处理，上限同为 20 MiB。
+也可以把本地程序的输出通过管道传给 `--stdin`，不用生成中间 JSONL 文件。此参数与文件名二选一，输入仍在本机处理，上限同为 20 MiB。此选项已在当前 `main` 提供，`v0.3.0` 标签不支持。用内置虚构样例试跑：
+
+```sh
+cat examples/claude.synthetic.jsonl | node bin/agent-bugcard.cjs --stdin --lang zh-Hans --exit-codes --format text
+```
 
 **已返回**表示有工具响应，执行结果仍需确认。**未配对**表示没有找到对应的完成记录。程序只显示能识别的失败信号。报告解析问题时请用自己编的最小样例。[反馈问题](https://github.com/vighzhen/agent-bugcard/issues)

@@ -1,6 +1,6 @@
 # Agent Bugcard · 工具錯誤診斷卡
 
-[**開啟繁體中文示範**](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hant) · [備用單檔下載](https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html) · [離線壓縮檔](https://vighzhen.github.io/agent-bugcard/agent-bugcard-offline.zip) · [简体中文](README.zh-CN.md) · [English](README.md)
+[**開啟繁體中文示範**](https://vighzhen.github.io/agent-bugcard/?lang=zh-Hant) · [備用 HTML（v0.3.0）](https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html) · [示範離線壓縮檔](https://vighzhen.github.io/agent-bugcard/agent-bugcard-offline.zip) · [简体中文](README.zh-CN.md) · [English](README.md)
 
 遇到 Claude Code 或 Codex CLI 出錯時，可以把失敗的步驟整理給同事。工具會在你的電腦上讀取工作階段，依照你選擇的欄位產生診斷卡。原始對話、指令及檔案路徑都留在本機。
 
@@ -18,7 +18,7 @@ Claude 範例出現結束碼 **127**，可以先確認指令名稱與 PATH。切
 
 ## 從備用位址取得離線檔案
 
-建議優先使用上方的正式示範或站內離線壓縮檔。若你的網路無法開啟，可從備用 CDN 取得相同的 HTML。瀏覽器可能顯示原始碼；請以「另存新檔」儲存為 `agent-bugcard.html`（檔案類型選「所有檔案」），再以瀏覽器開啟。Windows 的 PowerShell 也可以執行：
+線上示範與示範離線壓縮檔都是瀏覽器版。若需按版本下載，請開啟 [GitHub Releases](https://github.com/vighzhen/agent-bugcard/releases/latest)。若無法開啟示範，可透過備用 CDN 下載固定為 `v0.3.0` 的 HTML；它不會隨線上示範更新。瀏覽器可能顯示原始碼；請以「另存新檔」儲存為 `agent-bugcard.html`（檔案類型選「所有檔案」），再以瀏覽器開啟。Windows 的 PowerShell 也可以執行：
 
 ```powershell
 curl.exe -fL "https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/index.html" -o agent-bugcard.html
@@ -35,13 +35,17 @@ curl.exe -fL "https://cdn.jsdelivr.net/gh/vighzhen/agent-bugcard@v0.3.0/docs/ind
 
 ## 命令列
 
-在專案目錄使用 Node.js 18+ 執行：
+需要 Node.js 18+。複製儲存庫目前的 `main` 分支後執行；上方的 HTML 和離線壓縮檔不含命令列工具。
 
 ```sh
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hant --exit-codes --format text
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hant --call 3 --exit-codes --format svg > receipt.svg
 ```
 
-也可以透過管線將本機程式的輸出傳給 `--stdin`，不用建立中間 JSONL 檔案。此參數與檔名二選一，輸入仍在本機處理，上限同為 20 MiB。
+也可透過管線把本機程式的輸出傳給 `--stdin`，不必建立中間 JSONL 檔案。此參數與檔名二選一，輸入仍在本機處理，上限同為 20 MiB。此選項已在目前的 `main` 提供，`v0.3.0` 標籤不支援。使用內附虛構範例試跑：
+
+```sh
+cat examples/claude.synthetic.jsonl | node bin/agent-bugcard.cjs --stdin --lang zh-Hant --exit-codes --format text
+```
 
 **已傳回**表示有工具回應，執行結果仍需確認。**未配對**表示找不到對應的完成記錄。回報解析問題時，請附自行編寫的最小範例。[回報問題](https://github.com/vighzhen/agent-bugcard/issues)
