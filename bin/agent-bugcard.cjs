@@ -13,6 +13,12 @@ const lang = localeIndex === -1 ? 'en' : languages.match(args[localeIndex + 1]);
 function fail(message) { console.error(message); process.exit(2); }
 if (!lang) fail('--lang: en | zh-Hans | zh-Hant');
 const t = key => languages.text(lang,key);
+const inputError = {
+  en: {kind:'Choose a regular JSONL file, not a directory or other special file.', size:'Input exceeds 20 MiB.'},
+  'zh-Hans': {kind:'请选择普通 JSONL 文件，而不是目录或其他特殊文件。', size:'输入超过 20 MiB。'},
+  'zh-Hant': {kind:'請選擇一般 JSONL 檔案，而非資料夾或其他特殊檔案。', size:'輸入超過 20 MiB。'}
+}[lang];
+const NOT_REGULAR = Symbol('not a regular file');
 const usage = t('cliUsage') + ': node bin/agent-bugcard.cjs [--lang en|zh-Hans|zh-Hant] [--format md|svg|text] [--summary-only] [--hide-categories] [--exit-codes] [--call NUMBER] ([--] FILE | --stdin)';
 if (args.includes('--help') || args.includes('-h')) { console.log(usage); process.exit(0); }
 
@@ -56,17 +62,20 @@ async function readStdin() {
   let size=0;
   for await (const chunk of process.stdin) {
     size+=chunk.length;
-    if (size>core.limit) fail(t('cliSize'));
+    if (size>core.limit) fail(inputError.size);
     chunks.push(chunk);
   }
   return Buffer.concat(chunks,size).toString('utf8');
 }
 
 function readFileBounded(path) {
+  // 某些平台不能以文件方式打开目录；仍须检查实际打开的描述符。
+  if (!fs.statSync(path).isFile()) return NOT_REGULAR;
   const fd=fs.openSync(path,fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
   try {
     const stat=fs.fstatSync(fd);
-    if (!stat.isFile() || stat.size>core.limit) return null;
+    if (!stat.isFile()) return NOT_REGULAR;
+    if (stat.size>core.limit) return null;
     const chunks=[];
     let size=0;
     // The opened file can grow after fstat; bound the bytes actually read.
@@ -91,6 +100,7 @@ if (stdin) {
   try {
     raw=readFileBounded(file);
   } catch { fail(t('cliRead')); }
-  if (raw===null) fail(t('cliSize'));
+  if (raw===NOT_REGULAR) fail(inputError.kind);
+  if (raw===null) fail(inputError.size);
   renderReceipt(raw);
 }

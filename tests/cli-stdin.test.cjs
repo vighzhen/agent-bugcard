@@ -76,3 +76,23 @@ test('CLI file accepts exactly 20 MiB with an unchanged receipt', (t) => {
   assert.equal(out.stdout,original.stdout);
   assert.equal(out.stderr,original.stderr);
 });
+
+test('CLI distinguishes a directory from oversized input in each language', (t) => {
+  const folder = fs.mkdtempSync(join(require('node:os').tmpdir(),'bugcard-folder-'));
+  t.after(() => fs.rmSync(folder,{recursive:true,force:true}));
+  for (const [lang,message] of [
+    ['en','Choose a regular JSONL file, not a directory or other special file.'],
+    ['zh-Hans','请选择普通 JSONL 文件，而不是目录或其他特殊文件。'],
+    ['zh-Hant','請選擇一般 JSONL 檔案，而非資料夾或其他特殊檔案。']
+  ]) {
+    const out = run(['--lang',lang,folder]);
+    assert.equal(out.status,2,out.stderr);
+    assert.equal(out.stdout,'');
+    assert.equal(out.stderr.trim(),message);
+    assert.ok(!out.stderr.includes(folder));
+  }
+  const missing = run([join(folder,'not-here.jsonl')]);
+  assert.equal(missing.status,2);
+  assert.equal(missing.stdout,'');
+  assert.equal(missing.stderr.trim(),'Could not read the selected file.');
+});
