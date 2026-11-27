@@ -152,3 +152,20 @@ test('CLI file accepts a path containing spaces and non-ASCII characters', (t) =
   assert.equal(file.stderr,input.stderr);
   assert.doesNotMatch(file.stdout,/本地 测试 日志/);
 });
+
+test('CLI refuses repeated single-value options before generating any receipt', () => {
+  const input = fs.readFileSync(example);
+  for (const path of [[example], ['--stdin']]) {
+    for (const options of [
+      ['--call','3','--call','3'],
+      ['--call','999','--call','3'],
+      ['--format','md','--format','text'],
+      ['--lang','zh-Hans','--lang','en'],
+    ]) {
+      const result = run([...path,...options],input);
+      assert.equal(result.status,2,options.join(' '));
+      assert.equal(result.stdout,'');
+      assert.match(result.stderr,/--format/);
+    }
+  }
+});

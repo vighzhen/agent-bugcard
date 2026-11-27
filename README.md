@@ -37,6 +37,8 @@ Use `--stdin` instead of a filename (not both) to read piped input locally, up t
 cat examples/claude.synthetic.jsonl | node bin/agent-bugcard.cjs --stdin --exit-codes
 ```
 
+Provide each of `--call`, `--format` and `--lang` at most once. Repeats are errors, not overrides.
+
 `--call N` selects the numbered error call shown in the card. `--hide-categories` and `--summary-only` also suppress numeric exit codes and their troubleshooting hints.
 
 ## What the card discloses
