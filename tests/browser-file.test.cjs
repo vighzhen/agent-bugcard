@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const {Blob} = require('node:buffer');
 const {TextDecoder} = require('node:util');
 
-function openBuiltPage() {
+function openBuiltPage(clipboard) {
   const html = fs.readFileSync(path.join(__dirname,'../docs/index.html'),'utf8');
   const script = html.match(/<script id="app-source">([\s\S]+?)<\/script>/)[1];
   const nodes = new Map();
@@ -17,6 +17,7 @@ function openBuiltPage() {
     classList: {toggle() {}},
     add(option) { this.options.push(option); },
     setAttribute() {},
+    focus() {}, select() {},
     replaceChildren() { this.options.length = 0; },
     insertRow() { return {insertCell: makeNode}; }
   });
@@ -30,7 +31,7 @@ function openBuiltPage() {
       documentElement: {}, getElementById: node, querySelector: makeNode,
       querySelectorAll: () => []
     },
-    navigator: {language:'en'}, location: {search:''},
+    navigator: {language:'en', clipboard}, location: {search:''},
     URLSearchParams, TextDecoder, Option: function(label,value) { Object.assign(this,{label,value}); }
   });
   vm.runInContext(script, ctx);
@@ -74,4 +75,39 @@ test('an earlier invalid selection cannot overwrite a newer valid one', async ()
   await first;
   assert.equal(page.node('notice').textContent, '');
   assert.equal(page.node('saveMd').disabled, false);
+});
+
+test('后完成的旧复制请求不会覆盖最近请求的预览提示', async () => {
+  const writes = [];
+  const page = openBuiltPage({writeText(text) {
+    return new Promise((resolve,reject) => writes.push({text,resolve,reject}));
+  }});
+  await page.select(new Blob([trace]));
+  const first = page.node('copyText').onclick();
+  const latest = page.node('copy').onclick();
+  assert.equal(writes.length,2);
+  assert.notEqual(writes[0].text,writes[1].text);
+  writes[1].resolve();
+  await latest;
+  const feedback = page.node('feedback').textContent;
+  const preview = page.node('md').value;
+  assert.match(feedback,/^Copied\./);
+  assert.equal(preview,writes[1].text);
+  writes[0].reject(new Error('blocked'));
+  await first;
+  assert.equal(page.node('feedback').textContent,feedback);
+  assert.equal(page.node('md').value,preview);
+});
+
+test('最近一次复制失败仍可选中相应纯文本', async () => {
+  const writes = [];
+  const page = openBuiltPage({writeText(text) {
+    writes.push(text);
+    return Promise.reject(new Error('blocked'));
+  }});
+  await page.select(new Blob([trace]));
+  await page.node('copyText').onclick();
+  assert.equal(page.node('exact').open,true);
+  assert.equal(page.node('md').value,writes[0]);
+  assert.match(page.node('feedback').textContent,/copy/i);
 });
