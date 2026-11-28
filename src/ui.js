@@ -152,12 +152,23 @@ element('file').onchange = async () => {
   noticeKey = file.size > Bugcard.limit ? 'large' : 'loading';
   render();
   if (file.size > Bugcard.limit) return;
+  let bytes;
   try {
-    const text = await file.text();
-    if (request === revision) loadTrace(text,'file');
+    bytes = await file.arrayBuffer();
   } catch {
     if (request === revision) { noticeKey = 'unreadable'; render(); }
+    return;
   }
+  if (request !== revision) return;
+  let text;
+  try {
+    text = new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+  } catch {
+    noticeKey = 'invalidEncoding';
+    render();
+    return;
+  }
+  loadTrace(text,'file');
 };
 function download(format) {
   if (!report?.count) return;

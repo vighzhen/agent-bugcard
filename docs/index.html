@@ -86,6 +86,7 @@ const BugcardLanguages = (() => {
     none: ['No supported tool calls found. Choose a Claude Code or Codex CLI session JSONL.', '未找到可识别的工具调用。请选择 Claude Code 或 Codex CLI 的 JSONL 会话文件。', '找不到可辨識的工具呼叫。請選擇 Claude Code 或 Codex CLI 的 JSONL 工作階段檔案。'],
     large: ['Choose a single JSONL file up to 20 MiB.', '请选择不超过 20 MiB 的单个 JSONL 文件。', '請選擇不超過 20 MiB 的單一 JSONL 檔案。'],
     loading: ['Reading the file locally…', '正在本机读取文件…', '正在本機讀取檔案…'],
+    invalidEncoding: ['Input is not valid UTF-8. Save the JSONL file as UTF-8 and try again.', '输入不是有效的 UTF-8。请将 JSONL 文件保存为 UTF-8 后重试。', '輸入不是有效的 UTF-8。請將 JSONL 檔案儲存為 UTF-8 後重試。'],
     unreadable: ['Could not read the selected file.', '无法读取所选文件。', '無法讀取所選檔案。'],
     summaryScope: ['Only counts, agent format and parsing notes are shared.', '仅分享统计、工具来源和解析提示。', '僅分享統計、工具來源與解析提示。'],
     codeScope: ['Hiding exit codes also hides their troubleshooting hints.', '隐藏退出码也会隐藏对应的排查建议。', '隱藏結束碼也會隱藏對應的檢查建議。'],
@@ -597,12 +598,23 @@ element('file').onchange = async () => {
   noticeKey = file.size > Bugcard.limit ? 'large' : 'loading';
   render();
   if (file.size > Bugcard.limit) return;
+  let bytes;
   try {
-    const text = await file.text();
-    if (request === revision) loadTrace(text,'file');
+    bytes = await file.arrayBuffer();
   } catch {
     if (request === revision) { noticeKey = 'unreadable'; render(); }
+    return;
   }
+  if (request !== revision) return;
+  let text;
+  try {
+    text = new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+  } catch {
+    noticeKey = 'invalidEncoding';
+    render();
+    return;
+  }
+  loadTrace(text,'file');
 };
 function download(format) {
   if (!report?.count) return;
