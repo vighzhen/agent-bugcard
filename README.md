@@ -31,6 +31,8 @@ node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --call 3 --exit-codes
 node bin/agent-bugcard.cjs path/to/session.jsonl --summary-only > receipt.md
 ```
 
+The `>` examples assume Bash (or another POSIX shell) or PowerShell 7.4+. Windows PowerShell 5.1 rewrites redirected output as UTF-16LE by default. On 5.1, open the log in the browser edition and choose **Save SVG** or **Save Markdown** instead.
+
 Use `--stdin` instead of a filename (not both) to read piped input locally, up to 20 MiB. This option is on current `main`, not in the v0.3.0 tag. Try the bundled synthetic session in Bash or another POSIX shell. In Windows PowerShell, use the filename form above rather than piping with `cat`. The CLI expects UTF-8 input, with or without a BOM:
 
 ```sh
