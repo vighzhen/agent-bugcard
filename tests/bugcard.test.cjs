@@ -157,3 +157,20 @@ test('a running Codex shell envelope does not claim a terminal result', () => {
   assert.equal(parse(lines(call('exec_command'),output('Output:\n'+running))).calls[0].state,'Returned');
   assert.equal(parse(lines(call('exec_command'), output(running),output(running.replace('running with session ID 38163','exited with code 0')))).calls[0].state,'Returned');
 });
+
+test('an explicit failed or declined command does not become returned on exit zero', () => {
+  const item = (id, status, exit_code) => ({
+    type:'event_msg', payload:{type:'item_completed', item:{id,type:'CommandExecution',status,exit_code}}
+  });
+  const report = parse(lines(
+    item('failed-command','failed',0),
+    {type:'response_item',payload:{type:'function_call_output',call_id:'declined-command',
+      output:'Chunk ID: example\nWall time: 0.01 seconds\nProcess exited with code 0'}},
+    item('declined-command','declined'),
+    item('completed-command','completed',0),
+    item('unreported-command',undefined,0)
+  ));
+  assert.equal(report.errors,2);
+  assert.deepEqual(report.calls.map(call=>call.state),['Error','Error','Returned','Returned']);
+  assert.ok(report.calls.every(call=>call.exitCode===undefined));
+});

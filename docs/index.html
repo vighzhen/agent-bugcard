@@ -299,7 +299,8 @@ const Bugcard = (() => {
       const code = acceptsExit ? completion?.code ?? result?.code ?? legacyCode : null;
       const awaitingExit = group === 'Shell' && call.format === 'Codex CLI' && result?.pending;
       let state = completion?.state ?? (awaitingExit ? 'Unpaired' : result?.state ?? 'Unpaired');
-      if (Number.isInteger(code)) state = code === 0 ? 'Returned' : 'Error';
+      // A contradictory zero exit must not erase a known terminal failure.
+      if (Number.isInteger(code) && state !== 'Error') state = code === 0 ? 'Returned' : 'Error';
       const row = {n: rows.length + 1, kind: group, state};
       // Preserve failures outside 1..255 as errors, but never export that number.
       if (Number.isInteger(code) && code > 0 && code <= 255) row.exitCode = code;
