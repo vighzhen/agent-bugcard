@@ -77,6 +77,15 @@ const Bugcard = (() => {
         legacyCode: previous?.legacyCode ? previous.legacyCode : legacyCode ?? previous?.legacyCode
       });
     }
+    function complete(id, code, failed = false) {
+      const callKey = key('Codex CLI', id);
+      const previous = completions.get(callKey);
+      // 结构化结果可能重复；后来的成功镜像不能覆盖已经明确的失败。
+      const nonzero = Number.isInteger(code) && code !== 0;
+      const priorNonzero = Number.isInteger(previous?.code) && previous.code !== 0;
+      const state = failed || nonzero || previous?.state === 'Error' ? 'Error' : 'Returned';
+      completions.set(callKey, {state, code: nonzero || !priorNonzero ? code ?? previous?.code : previous.code});
+    }
     // Tolerate one UTF-8 BOM at the file boundary without masking malformed later records.
     const jsonl = text.startsWith('\uFEFF') ? text.slice(1) : text;
     for (const line of jsonl.split(/\r?\n/)) {
@@ -105,7 +114,7 @@ const Bugcard = (() => {
         }
       } else if (event.type === 'event_msg' && payload) {
         if (payload.type === 'exec_command_end' && present(payload.call_id) && Number.isSafeInteger(payload.exit_code)) {
-          completions.set(key('Codex CLI', payload.call_id), {code: payload.exit_code});
+          complete(payload.call_id, payload.exit_code);
         }
         const item = payload.item;
         if (['item_started', 'item_completed'].includes(payload.type) && item?.type === 'CommandExecution' && present(item.id)) {
@@ -115,7 +124,7 @@ const Bugcard = (() => {
             const failed = ['failed','declined'].includes(item.status);
             // The record name alone is not terminal evidence and must not erase a known result.
             if (code !== null || failed || item.status === 'completed') {
-              completions.set(key('Codex CLI', item.id), {code, state: failed ? 'Error' : 'Returned'});
+              complete(item.id, code, failed);
             }
           }
         }

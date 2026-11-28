@@ -174,3 +174,24 @@ test('an explicit failed or declined command does not become returned on exit ze
   assert.deepEqual(report.calls.map(call=>call.state),['Error','Error','Returned','Returned']);
   assert.ok(report.calls.every(call=>call.exitCode===undefined));
 });
+
+
+test('structured duplicate completions preserve failure in either event order', () => {
+  const id = 'synthetic-duplicate-completion';
+  const item = (status, exit_code) => ({type:'event_msg',payload:{type:'item_completed',
+    item:{id,type:'CommandExecution',status,exit_code}}});
+  const legacy = exit_code => ({type:'event_msg',payload:{type:'exec_command_end',call_id:id,exit_code}});
+  for (const [failure,pass,expected] of [
+    [item('declined'),legacy(0),{n:1,kind:'Shell',state:'Error'}],
+    [item('failed',7),item('completed',0),{n:1,kind:'Shell',state:'Error',exitCode:7}],
+    [legacy(7),item('completed',0),{n:1,kind:'Shell',state:'Error',exitCode:7}],
+    [item('failed',0),legacy(0),{n:1,kind:'Shell',state:'Error'}]
+  ]) {
+    for (const events of [[failure,pass],[pass,failure]]) {
+      const r = parse(lines(rsp('function_call',id,{name:'exec_command'}),...events));
+      assert.deepEqual(r.calls,[expected]);
+      assert.doesNotMatch(markdown(r,{exitCodes:true}),/synthetic-duplicate-completion/);
+    }
+  }
+  assert.equal(parse(lines(item('completed',0),legacy(0))).calls[0].state,'Returned');
+});
