@@ -6,11 +6,16 @@ const path = require('node:path');
 const {test} = require('node:test');
 const vm = require('node:vm');
 const {Blob} = require('node:buffer');
+const {createHash} = require('node:crypto');
 const {TextDecoder} = require('node:util');
 
 const builtHtml = fs.readFileSync(path.join(__dirname,'../docs/index.html'),'utf8');
 
+const htmlWithNormalNewlines = html => html.replace(/\r\n?/g, '\n');
+
 function openBuiltPage(clipboard, browser, html = builtHtml) {
+  // Match HTML parsing: CRLF in a Windows checkout becomes LF before textContent is read.
+  html = htmlWithNormalNewlines(html);
   const script = html.match(/<script id="app-source">([\s\S]+?)<\/script>/)[1];
   const nodes = new Map();
   const makeNode = () => ({
@@ -178,7 +183,7 @@ test('保存离线工具不会携带已打开的本地日志或收据', async ()
       return {click() { downloads.push([this.href,this.download]); }};
     },
     url: {createObjectURL(blob) { blobs.push(blob); return 'blob:offline-fixture'; }}
-  });
+  }, htmlWithNormalNewlines(builtHtml).replace(/\n/g, '\r\n'));
   const marker = 'unique-local-trace-fixture';
   const original = [
     {type:'function_call',name:'exec_command',arguments:JSON.stringify({cmd:marker}),call_id:marker},
@@ -194,7 +199,8 @@ test('保存离线工具不会携带已打开的本地日志或收据', async ()
   assert.equal(blobs[0].type,'text/html;charset=utf-8');
   const offline = await blobs[0].text();
   assert.equal(offline.includes(marker),false);
-  assert.equal(offline,builtHtml);
+  const sha256 = value => createHash('sha256').update(value).digest('hex');
+  assert.equal(sha256(offline),sha256(htmlWithNormalNewlines(builtHtml)));
   const reopened = openBuiltPage(undefined,undefined,offline);
   assert.match(reopened.node('md').value, /127/);
   assert.equal(reopened.node('md').value.includes('103'),false);
