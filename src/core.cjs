@@ -141,7 +141,12 @@ const Bugcard = (() => {
       // Claude's textual exit header is recognized only on a Bash error result.
       const acceptsExit = call.format === 'Codex CLI' ? group === 'Shell' : call.name === 'Bash';
       const legacyCode = call.name === 'shell' || call.name === 'shell_command' ? result?.legacyCode : null;
-      const code = acceptsExit ? completion?.code ?? result?.code ?? legacyCode : null;
+      // 结构化非零值优先；结构化零值不能抹掉明确的输出失败证据。
+      const candidates = [completion?.code, result?.code, legacyCode];
+      const code = acceptsExit
+        ? candidates.find(value => Number.isInteger(value) && value !== 0)
+          ?? completion?.code ?? result?.code ?? legacyCode
+        : null;
       const awaitingExit = group === 'Shell' && call.format === 'Codex CLI' && result?.pending;
       let state = completion?.state ?? (awaitingExit ? 'Unpaired' : result?.state ?? 'Unpaired');
       // A contradictory zero exit must not erase a known terminal failure.
