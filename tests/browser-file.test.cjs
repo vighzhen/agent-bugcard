@@ -8,8 +8,9 @@ const vm = require('node:vm');
 const {Blob} = require('node:buffer');
 const {TextDecoder} = require('node:util');
 
-function openBuiltPage(clipboard, png) {
-  const html = fs.readFileSync(path.join(__dirname,'../docs/index.html'),'utf8');
+const builtHtml = fs.readFileSync(path.join(__dirname,'../docs/index.html'),'utf8');
+
+function openBuiltPage(clipboard, browser, html = builtHtml) {
   const script = html.match(/<script id="app-source">([\s\S]+?)<\/script>/)[1];
   const nodes = new Map();
   const makeNode = () => ({
@@ -26,14 +27,18 @@ function openBuiltPage(clipboard, png) {
     return nodes.get(id);
   };
   node('cardLang').value = 'auto';
+  node('app-source').textContent = script;
+  node('offline-layout').textContent = html.match(
+    /<script id="offline-layout" type="application\/json">([\s\S]+?)<\/script>/
+  )[1];
   const ctx = vm.createContext({
     document: {
       documentElement: {}, getElementById: node, querySelector: makeNode,
-      createElement: tag => png.createElement(tag),
+      createElement: tag => browser.createElement(tag),
       querySelectorAll: () => []
     },
     navigator: {language:'en', clipboard}, location: {search:''},
-    URL: png?.url, Image: png?.Image, setTimeout: () => {},
+    URL: browser?.url, Image: browser?.Image, Blob, setTimeout: () => {},
     URLSearchParams, TextDecoder, Option: function(label,value) { Object.assign(this,{label,value}); }
   });
   vm.runInContext(script, ctx);
@@ -163,4 +168,34 @@ test('旧 PNG 失败不会在更新的下载完成后显示错误', async () => 
   await earlier;
   assert.deepEqual(saved,[['current-png','agent-bugcard.png']]);
   assert.equal(node('feedback').textContent,'');
+});
+
+test('保存离线工具不会携带已打开的本地日志或收据', async () => {
+  const blobs = [], downloads = [];
+  const page = openBuiltPage(undefined, {
+    createElement(tag) {
+      assert.equal(tag, 'a');
+      return {click() { downloads.push([this.href,this.download]); }};
+    },
+    url: {createObjectURL(blob) { blobs.push(blob); return 'blob:offline-fixture'; }}
+  });
+  const marker = 'unique-local-trace-fixture';
+  const original = [
+    {type:'function_call',name:'exec_command',arguments:JSON.stringify({cmd:marker}),call_id:marker},
+    {type:'function_call_output',call_id:marker,output:'Chunk ID: ab1\nWall time: 0.01 seconds\nProcess exited with code 103\nOutput:\n' + marker}
+  ].map(payload => JSON.stringify({type:'response_item',payload})).join('\n');
+  await page.select(new Blob([original]));
+  page.node('exitCodes').checked = true;
+  page.node('exitCodes').onchange();
+  assert.match(page.node('md').value, /103/);
+  page.node('offline').onclick();
+  assert.deepEqual(downloads,[['blob:offline-fixture','agent-bugcard.html']]);
+  assert.equal(blobs.length,1);
+  assert.equal(blobs[0].type,'text/html;charset=utf-8');
+  const offline = await blobs[0].text();
+  assert.equal(offline.includes(marker),false);
+  assert.equal(offline,builtHtml);
+  const reopened = openBuiltPage(undefined,undefined,offline);
+  assert.match(reopened.node('md').value, /127/);
+  assert.equal(reopened.node('md').value.includes('103'),false);
 });
