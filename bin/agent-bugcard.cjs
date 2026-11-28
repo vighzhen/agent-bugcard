@@ -14,14 +14,16 @@ const lang = localeIndex === -1 ? 'en' : languages.match(args[localeIndex + 1]);
 function fail(message) { console.error(message); process.exit(2); }
 if (!lang) fail('--lang: en | zh-Hans | zh-Hant');
 const t = key => languages.text(lang,key);
-const inputError = {
-  en: {kind:'Choose a regular JSONL file, not a directory or other special file.', size:'Input exceeds 20 MiB.', encoding:'Input is not valid UTF-8. Save the JSONL file as UTF-8 and try again.'},
-  'zh-Hans': {kind:'请选择普通 JSONL 文件，而不是目录或其他特殊文件。', size:'输入超过 20 MiB。', encoding:'输入不是有效的 UTF-8。请将 JSONL 文件保存为 UTF-8 后重试。'},
-  'zh-Hant': {kind:'請選擇一般 JSONL 檔案，而非資料夾或其他特殊檔案。', size:'輸入超過 20 MiB。', encoding:'輸入不是有效的 UTF-8。請將 JSONL 檔案儲存為 UTF-8 後重試。'}
+const ioError = {
+  en: {kind:'Choose a regular JSONL file, not a directory or other special file.', size:'Input exceeds 20 MiB.', encoding:'Input is not valid UTF-8. Save the JSONL file as UTF-8 and try again.', write:'Could not write output. Check the destination and try again.'},
+  'zh-Hans': {kind:'请选择普通 JSONL 文件，而不是目录或其他特殊文件。', size:'输入超过 20 MiB。', encoding:'输入不是有效的 UTF-8。请将 JSONL 文件保存为 UTF-8 后重试。', write:'无法写入输出。请检查输出目标后重试。'},
+  'zh-Hant': {kind:'請選擇一般 JSONL 檔案，而非資料夾或其他特殊檔案。', size:'輸入超過 20 MiB。', encoding:'輸入不是有效的 UTF-8。請將 JSONL 檔案儲存為 UTF-8 後重試。', write:'無法寫入輸出。請檢查輸出目標後重試。'}
 }[lang];
+// 输出设备写入失败时给出可操作提示，不打印原始错误与堆栈。
+process.stdout.on('error',()=>fail(ioError.write));
 const NOT_REGULAR = Symbol('not a regular file');
 const usage = t('cliUsage') + ': node bin/agent-bugcard.cjs [--lang en|zh-Hans|zh-Hant] [--format md|svg|text] [--summary-only] [--hide-categories] [--exit-codes] [--call NUMBER] ([--] FILE | --stdin)';
-if (args.includes('--help') || args.includes('-h')) { console.log(usage); process.exit(0); }
+if (args.includes('--help') || args.includes('-h')) { process.stdout.write(usage+'\n'); return; }
 
 let file, format, nearby=true, categories=true, exitCodes=false, call, stdin=false;
 for (let i=0; i<args.length; i++) {
@@ -55,7 +57,7 @@ function renderReceipt(bytes) {
   try {
     // 保留开头的 BOM，由共用解析器处理；不以替换字符掩盖损坏的编码。
     raw=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
-  } catch { fail(inputError.encoding); }
+  } catch { fail(ioError.encoding); }
   const receipt=core.parse(raw);
   if (!receipt.count) fail(t('cliNone'));
   if (call && !receipt.calls.some(row=>row.n===call && row.state==='Error')) fail(t('cliCall'));
@@ -69,7 +71,7 @@ async function readStdin() {
   let size=0;
   for await (const chunk of process.stdin) {
     size+=chunk.length;
-    if (size>core.limit) fail(inputError.size);
+    if (size>core.limit) fail(ioError.size);
     chunks.push(chunk);
   }
   return Buffer.concat(chunks,size);
@@ -107,7 +109,7 @@ if (stdin) {
   try {
     raw=readFileBounded(file);
   } catch { fail(t('cliRead')); }
-  if (raw===NOT_REGULAR) fail(inputError.kind);
-  if (raw===null) fail(inputError.size);
+  if (raw===NOT_REGULAR) fail(ioError.kind);
+  if (raw===null) fail(ioError.size);
   renderReceipt(raw);
 }
