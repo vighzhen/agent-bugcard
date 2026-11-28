@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const {Blob} = require('node:buffer');
 const {TextDecoder} = require('node:util');
 
-function openBuiltPage(clipboard) {
+function openBuiltPage(clipboard, png) {
   const html = fs.readFileSync(path.join(__dirname,'../docs/index.html'),'utf8');
   const script = html.match(/<script id="app-source">([\s\S]+?)<\/script>/)[1];
   const nodes = new Map();
@@ -29,9 +29,11 @@ function openBuiltPage(clipboard) {
   const ctx = vm.createContext({
     document: {
       documentElement: {}, getElementById: node, querySelector: makeNode,
+      createElement: tag => png.createElement(tag),
       querySelectorAll: () => []
     },
     navigator: {language:'en', clipboard}, location: {search:''},
+    URL: png?.url, Image: png?.Image, setTimeout: () => {},
     URLSearchParams, TextDecoder, Option: function(label,value) { Object.assign(this,{label,value}); }
   });
   vm.runInContext(script, ctx);
@@ -110,4 +112,55 @@ test('最近一次复制失败仍可选中相应纯文本', async () => {
   assert.equal(page.node('exact').open,true);
   assert.equal(page.node('md').value,writes[0]);
   assert.match(page.node('feedback').textContent,/copy/i);
+});
+
+function openPngPage() {
+  const images = [], encoders = [], saved = [];
+  const page = openBuiltPage(undefined, {
+    Image: class {
+      constructor() {
+        this.naturalWidth = 10;
+        this.naturalHeight = 10;
+        images.push(this);
+      }
+    },
+    createElement(tag) {
+      if (tag === 'canvas') {
+        return {getContext: () => ({drawImage() {}}), toBlob: callback => encoders.push(callback)};
+      }
+      assert.equal(tag,'a');
+      return {click() { saved.push([this.href,this.download]); }};
+    },
+    url: {createObjectURL: blob => blob.id}
+  });
+  return {images,encoders,saved,node:page.node};
+}
+
+test('PNG 编码完成前修改设置，即使改回也取消原下载', async () => {
+  const {images,encoders,saved,node} = openPngPage();
+  const download = node('savePng').onclick();
+  images[0].onload();
+  await Promise.resolve();
+  node('nearby').checked = false;
+  node('nearby').onchange();
+  node('nearby').checked = true;
+  node('nearby').onchange();
+  assert.equal(encoders.length,1);
+  encoders[0]({id:'obsolete-png'});
+  await download;
+  assert.deepEqual(saved,[]);
+});
+
+test('旧 PNG 失败不会在更新的下载完成后显示错误', async () => {
+  const {images,encoders,saved,node} = openPngPage();
+  const earlier = node('savePng').onclick();
+  const latest = node('savePng').onclick();
+  images[1].onload();
+  await Promise.resolve();
+  encoders[0]({id:'current-png'});
+  await latest;
+  images[0].onerror(new Error('old failure'));
+  await earlier;
+  assert.deepEqual(saved,[['current-png','agent-bugcard.png']]);
+  assert.equal(node('feedback').textContent,'');
 });

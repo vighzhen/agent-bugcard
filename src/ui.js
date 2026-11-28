@@ -6,6 +6,7 @@ let report = null;
 let source = '';
 let revision = 0;
 let copyRevision = 0;
+let pngRevision = 0;
 let noticeKey = '';
 let previewKind = 'md';
 let uiLanguage = initialLanguage();
@@ -44,6 +45,7 @@ function writePreview() {
   element('md').value = report?.count ? (plain ? Bugcard.plainText : Bugcard.markdown)(report,opts) : '';
 }
 function render() {
+  pngRevision++;
   const sharing = options();
   const ready = Boolean(report?.count);
   const ct = (key,values) => BugcardLanguages.text(sharing.lang,key,values);
@@ -187,9 +189,10 @@ function saveBlob(blob, format) {
 }
 async function downloadPng() {
   if (!report?.count) return;
-  const request = revision;
+  const request = ++pngRevision;
   const sharing = options();
-  const stillCurrent = () => revision === request && JSON.stringify(sharing) === JSON.stringify(options());
+  // 新预览或新的 PNG 请求会使尚未完成的旧下载失效。
+  const stillCurrent = () => pngRevision === request;
   try {
     const drawing = new Image();
     const loaded = new Promise((resolve,reject) => { drawing.onload = resolve; drawing.onerror = reject; });
