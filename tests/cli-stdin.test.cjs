@@ -169,3 +169,29 @@ test('CLI refuses repeated single-value options before generating any receipt', 
     }
   }
 });
+
+
+test('CLI reports failed receipt writes without exposing an internal stack', {
+  skip: process.platform !== 'linux' || !fs.existsSync('/dev/full')
+}, () => {
+  const fd = fs.openSync('/dev/full','w');
+  try {
+    const bytes = fs.readFileSync(example);
+    for (const [lang,message] of [
+      ['en','Could not write output. Check the destination and try again.'],
+      ['zh-Hans','无法写入输出。请检查输出目标后重试。'],
+      ['zh-Hant','無法寫入輸出。請檢查輸出目標後重試。']
+    ]) {
+      for (const [source,input] of [[[example],undefined],[['--help'],undefined],[['--stdin'],bytes]]) {
+        const result = spawnSync(process.execPath,[cli,'--lang',lang,...source],{
+          input, encoding:'utf8', stdio:['pipe',fd,'pipe']
+        });
+        assert.ifError(result.error);
+        assert.equal(result.status,2,result.stderr);
+        assert.equal(result.stderr.trim(),message);
+      }
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+});
