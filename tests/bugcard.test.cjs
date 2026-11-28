@@ -195,3 +195,31 @@ test('structured duplicate completions preserve failure in either event order', 
   }
   assert.equal(parse(lines(item('completed',0),legacy(0))).calls[0].state,'Returned');
 });
+
+test('混合 Codex 终态证据时，明确失败不会被结构化零值抹掉', () => {
+  const id = 'synthetic-mixed-terminal';
+  const terminal = exit_code => ({type:'event_msg',
+    payload:{type:'exec_command_end',call_id:id,exit_code}});
+  const modern = code => 'Chunk ID: sample\nWall time: 1.0 seconds\nProcess exited with code '+code+
+    '\nOutput:\nDUMMY_PRIVATE_STDOUT';
+  const envelope = code => JSON.stringify({output:'DUMMY_PRIVATE_STDOUT',
+    metadata:{duration_seconds:0.1,exit_code:code}});
+  for (const [name,output] of [['exec_command',modern(9)],['shell',envelope(9)]]) {
+    const evidence = rsp('function_call_output',id,{output});
+    for (const results of [[evidence,terminal(0)],[terminal(0),evidence]]) {
+      const input = lines(rsp('function_call',id,{name}),...results);
+      const report = parse(input);
+      assert.deepEqual(report.calls,[{n:1,kind:'Shell',state:'Error',exitCode:9}]);
+      for (const render of [markdown,svg]) {
+        assert.doesNotMatch(render(report),/exit 9/);
+        assert.match(render(report,{exitCodes:true}),/exit 9/);
+        assert.doesNotMatch(render(report,{exitCodes:true}),/DUMMY_PRIVATE_STDOUT|synthetic-mixed-terminal/);
+      }
+    }
+    const preferred = parse(lines(rsp('function_call',id,{name}),evidence,terminal(17)));
+    assert.equal(preferred.calls[0].exitCode,17);
+  }
+  const clean = parse(lines(rsp('function_call',id,{name:'exec_command'}),
+    rsp('function_call_output',id,{output:modern(0)}),terminal(0)));
+  assert.deepEqual(clean.calls,[{n:1,kind:'Shell',state:'Returned'}]);
+});
