@@ -42,6 +42,8 @@ node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hant --exit
 node bin/agent-bugcard.cjs examples/claude.synthetic.jsonl --lang zh-Hant --call 3 --exit-codes --format svg > receipt.svg
 ```
 
+上方含 `>` 的匯出範例適用於 Bash（或其他 POSIX Shell）及 PowerShell 7.4+。Windows PowerShell 5.1 預設會將重新導向的輸出寫成 UTF-16LE；使用 5.1 時，可在瀏覽器版開啟記錄檔，選擇 **儲存 SVG** 或 **儲存 Markdown**。
+
 也可透過管線把本機程式的輸出傳給 `--stdin`，不必建立中間 JSONL 檔案。此參數與檔名二選一，輸入仍在本機處理，上限同為 20 MiB。此選項已在目前的 `main` 提供，`v0.3.0` 標籤不支援。下方的虛構範例在 Bash 或其他 POSIX shell 中執行。Windows PowerShell 請使用上方的檔名方式，不要使用 `cat` 管線。CLI 輸入須為 UTF-8，可含 BOM：
 
 ```sh
