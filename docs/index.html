@@ -466,6 +466,7 @@ const preferenceKey = 'agent-bugcard-ui-language';
 let report = null;
 let source = '';
 let revision = 0;
+let copyRevision = 0;
 let noticeKey = '';
 let previewKind = 'md';
 let uiLanguage = initialLanguage();
@@ -671,8 +672,11 @@ async function copy(kind) {
   if (!report?.count) return;
   const opts = options();
   const request = revision;
+  const latestCopy = ++copyRevision;
   const body = (kind === 'md' ? Bugcard.markdown : Bugcard.plainText)(report,opts);
-  const stillCurrent = () => request === revision && JSON.stringify(opts) === JSON.stringify(options());
+  // 即使报告与设置没变，也只显示最近一次复制操作的反馈。
+  const stillCurrent = () => latestCopy === copyRevision && request === revision
+    && JSON.stringify(opts) === JSON.stringify(options());
   try {
     await navigator.clipboard.writeText(body);
     if (stillCurrent()) element('feedback').textContent = t(kind === 'md' ? 'copiedMd' : 'copiedText');
